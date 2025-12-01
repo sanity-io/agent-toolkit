@@ -1,0 +1,14 @@
+{
+    "schema_version": "1.0",
+    "name": "sanity-plugin",
+    "version": "1.0.0",
+    "description": "Official Sanity.io developer tools. Includes skills for scaffolding schemas, setting up TypeGen, and installing best practices locally.",
+    "skills": [
+      "sanity-scaffold",
+      "sanity-typegen",
+      "sanity-install-rules"
+    ],
+    "mcp_servers": [
+      "sanity"
+    ]
+  }

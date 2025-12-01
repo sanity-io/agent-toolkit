@@ -1,0 +1,37 @@
+{
+  "name": "sanity-ai-toolkit",
+  "owner": {
+    "name": "Sanity.io",
+    "email": "support@sanity.io",
+    "url": "https://www.sanity.io"
+  },
+  "metadata": {
+    "description": "Official Sanity.io developer companion for Claude Code. Includes MCP integration, interactive skills, and expert context rules."
+  },
+  "repository": "https://github.com/sanity-io/ai-toolkit",
+  "homepage": "https://github.com/sanity-io/ai-toolkit",
+  "plugins": [
+    {
+      "name": "sanity-plugin",
+      "source": "./sanity-plugin",
+      "description": "Sanity.io developer tools including Schema scaffolding, Visual Editing setup, GROQ optimization, and TypeGen troubleshooting.",
+      "version": "1.0.0",
+      "keywords": [
+        "sanity",
+        "cms",
+        "content-lake",
+        "groq",
+        "schema",
+        "nextjs",
+        "visual-editing",
+        "mcp"
+      ],
+      "license": "MIT",
+      "author": {
+        "name": "Sanity.io Team",
+        "email": "support@sanity.io",
+        "url": "https://www.sanity.io"
+      }
+    }
+  ]
+}
