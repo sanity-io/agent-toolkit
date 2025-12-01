@@ -1,0 +1,169 @@
+---
+description: Use these rules when users ask to 'Get started with Sanity' or need help setting up a new Sanity project.
+globs: sanity.config.ts, sanity.cli.ts, next.config.mjs, **/*.ts, **/*.tsx
+alwaysApply: false
+---
+
+# Sanity.io Onboarding Guide
+
+## Overview
+This guide provides an interactive workflow to help users get started with Sanity.io in their Next.js project. It covers project setup, schema creation, and connecting the frontend.
+
+## Communication Style
+- **Direct & Action-Oriented:** "I've created the schema. Ready to query it?"
+- **Context-Aware:** Check if they are in a monorepo or single repo before suggesting paths.
+- **Step-by-Step:** Don't overwhelm. Do one thing well, then ask to proceed.
+
+---
+
+## Interactive Guide (Trigger: "Get started with Sanity")
+
+**RESUME TRIGGER:** If the user says "Continue Sanity setup", check `sanity.config.ts` and `sanity.cli.ts` to see where they left off.
+
+### Step 1: Project & CLI Check
+1.  **Check for `sanity.config.ts`**:
+    - If missing: Ask if they want to create a new Sanity project (Embedded in Next.js or Standalone).
+    - If present: Analyze the config to understand the `projectId` and `dataset`.
+2.  **Check Sanity CLI**:
+    - Ensure `@sanity/cli` is available (or use `npx sanity`).
+
+### Step 2: Content Modeling (Schema)
+1.  **Check for `schema` folder**:
+    - Look in `src/sanity/schemaTypes` or `schemaTypes`.
+2.  **Propose a Content Model**:
+    - Ask: "What kind of content are you building? (e.g., Blog, E-commerce, Portfolio)"
+    - Create a basic schema file (e.g., `post.ts`) using `defineType`.
+    - **Rule:** Always use `defineType`, `defineField`, `defineArrayMember`.
+
+### Step 3: Studio Setup
+1.  **Route Check**:
+    - Verify `app/studio/[[...tool]]/page.tsx` exists.
+    - If not, create it using the standard `NextStudio` component.
+2.  **Environment Variables** (see detailed section below).
+
+---
+
+## Environment Variables Best Practices
+
+### Naming Conventions
+
+| Variable | Prefix | Client-Side? | Purpose |
+|----------|--------|--------------|---------|
+| `NEXT_PUBLIC_SANITY_PROJECT_ID` | `NEXT_PUBLIC_` | ✅ Yes | Project identifier |
+| `NEXT_PUBLIC_SANITY_DATASET` | `NEXT_PUBLIC_` | ✅ Yes | Dataset name |
+| `SANITY_API_READ_TOKEN` | None | ❌ No | Server-only draft access |
+| `SANITY_REVALIDATE_SECRET` | None | ❌ No | Webhook signature |
+| `SANITY_STUDIO_*` | `SANITY_STUDIO_` | ✅ Yes (Studio) | Studio build-time vars |
+
+### Framework-Specific Prefixes
+
+| Framework | Client-Side Prefix |
+|-----------|-------------------|
+| Next.js | `NEXT_PUBLIC_` |
+| Remix | None (use loader) |
+| SvelteKit | `PUBLIC_` |
+| Nuxt | `NUXT_PUBLIC_` or `NUXT_` |
+| Astro | `PUBLIC_` |
+
+### Required vs Optional
+
+**Always Required:**
+```bash
+NEXT_PUBLIC_SANITY_PROJECT_ID=your-project-id
+NEXT_PUBLIC_SANITY_DATASET=production
+```
+
+**Required for Preview/Visual Editing:**
+```bash
+SANITY_API_READ_TOKEN=sk...  # Server-only! Never expose publicly
+```
+
+**Required for Webhooks:**
+```bash
+SANITY_REVALIDATE_SECRET=your-webhook-secret
+```
+
+### Security Rules
+- ⚠️ **NEVER** commit tokens to git. Add `.env.local` to `.gitignore`.
+- ⚠️ **NEVER** prefix tokens with `NEXT_PUBLIC_` (or framework equivalent).
+- ✅ Store production tokens in your deployment platform's environment settings.
+
+---
+
+### Step 4: Frontend Connection (Sanity Live)
+1.  **Check `sanity/lib/client.ts`**:
+    - Ensure the client is configured correctly.
+2.  **Setup `sanity/lib/live.ts`**:
+    - If missing, create the `defineLive` setup for real-time updates.
+3.  **Fetch Data**:
+    - Create a sample component (e.g., `Posts.tsx`) that uses `sanityFetch` and `defineQuery`.
+    - **Rule:** ALWAYS use `defineQuery` for TypeGen support.
+
+### Step 5: TypeGen Setup
+1.  **Scripts**:
+    - Add `"typegen": "sanity schema extract && sanity typegen generate"` to `package.json`.
+2.  **Config**:
+    - Ensure `sanity-typegen.json` exists.
+3.  **Run**:
+    - Run the typegen command to verify everything works.
+
+---
+
+## Best Practices Checklist
+- [ ] **Schema:** Are fields descriptive? Do they have icons?
+- [ ] **Queries:** Are they wrapped in `defineQuery`?
+- [ ] **Types:** Are we using generated types?
+- [ ] **Visual Editing:** Is `stega: true` (default in `defineLive`)?
+- [ ] **Clean Data:** Are we using `stegaClean` for logic-critical strings?
+
+## Common Commands
+- `npx sanity dev` - Start the Studio in development mode.
+- `npx sanity schema deploy` - **Deploy schema to Content Lake** (required for MCP).
+- `npx sanity manage` - Open project settings in browser.
+- `npx sanity cors add <url>` - Allow frontend URL for CORS.
+- `npm run typegen` - Generate TypeScript types.
+- `npx sanity docs` - Open Sanity documentation.
+
+## Using MCP for Content Operations
+
+The Sanity MCP server allows AI assistants to directly interact with your Content Lake.
+
+### Setup (Cursor)
+Add to MCP settings or use: [Add to Cursor →](cursor://anysphere.cursor-deeplink/mcp/install?name=Sanity&config=eyJ1cmwiOiJodHRwczovL21jcC5zYW5pdHkuaW8iLCJ0eXBlIjoiaHR0cCJ9Cg==)
+
+### ⚠️ Critical: Deploy Schema First!
+MCP content tools (`create_document`, `patch_document`, etc.) **require a deployed schema**:
+
+```bash
+# After any schema change:
+npx sanity schema deploy
+
+# Now MCP tools will work with your new schema
+```
+
+### What You Can Do With MCP
+- Query content: `query_documents`
+- Create/update content: `create_document`, `patch_document`
+- Inspect schema: `get_schema`
+- Manage datasets: `list_datasets`, `create_dataset`
+- AI translations: `translate_document`
+- And much more — see `rules/sanity-mcp.mdc`
+
+## Recommended Plugins
+
+### Vision (GROQ Playground)
+**Essential for GROQ development.** Test queries directly in the Studio.
+
+```typescript
+// sanity.config.ts
+import { visionTool } from '@sanity/vision'
+
+export default defineConfig({
+  plugins: [
+    structureTool(),
+    visionTool(), // 👈 Add this
+  ],
+})
+```
+
+Install: `npm install @sanity/vision`

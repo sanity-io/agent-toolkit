@@ -1,0 +1,91 @@
+---
+description: Best practices for rendering Portable Text (Rich Text) in React/Next.js.
+globs: **/*.tsx
+alwaysApply: false
+---
+
+# Sanity Portable Text Rules
+
+## 1. The Component
+Use the `PortableText` component from `next-sanity` (or `@portabletext/react`).
+
+```typescript
+import { PortableText } from "next-sanity";
+// or import { PortableText } from "@portabletext/react";
+
+export function Content({ value }: { value: any }) {
+  return <PortableText value={value} components={components} />;
+}
+```
+
+## 2. Custom Components (`components` prop)
+**Always** define a typed components object to handle custom blocks, marks, and list styles.
+
+```typescript
+import { PortableTextComponents } from "next-sanity";
+
+const components: PortableTextComponents = {
+  // 1. Blocks (Top-level blocks like paragraphs, headings, custom types)
+  block: {
+    // Customizing standard blocks
+    h1: ({ children }) => <h1 className="text-4xl font-bold">{children}</h1>,
+    blockquote: ({ children }) => <blockquote className="border-l-4 pl-4">{children}</blockquote>,
+  },
+  
+  // 2. Types (Custom schema types inside the array, e.g., 'image', 'code')
+  types: {
+    image: ({ value }) => <SanityImage value={value} />,
+    callToAction: ({ value }) => <Button href={value.url}>{value.text}</Button>,
+  },
+
+  // 3. Marks (Decorators like strong, em, link)
+  marks: {
+    // Custom link handling
+    link: ({ children, value }) => {
+      const rel = !value.href.startsWith("/") ? "noreferrer noopener" : undefined;
+      return (
+        <a href={value.href} rel={rel} className="underline text-blue-600">
+          {children}
+        </a>
+      );
+    },
+  },
+  
+  // 4. Lists
+  list: {
+    bullet: ({ children }) => <ul className="list-disc ml-4">{children}</ul>,
+    number: ({ children }) => <ol className="list-decimal ml-4">{children}</ol>,
+  },
+};
+```
+
+## 3. Type Safety
+When using TypeGen, the Portable Text value usually has a complex generated type. You can often use `any` or `PortableTextBlock[]` for the *prop*, but cast specific blocks if needed.
+
+```typescript
+import { PortableTextBlock } from "next-sanity";
+
+type Props = {
+  value: PortableTextBlock[];
+};
+```
+
+## 4. Best Practices
+- **Tailwind Typography:** For simple blogs, wrap `<PortableText />` in a `<div className="prose">` (from `@tailwindcss/typography`) instead of manually styling every block.
+- **Handling Nulls:** Always check if `value` exists and is an array before rendering.
+- **Keys:** The `PortableText` component handles React keys automatically using the `_key` from Sanity. Do not add keys manually.
+
+## 5. Schema Definition (Reference)
+Ensure your schema allows the types you are rendering.
+
+```typescript
+defineField({
+  name: 'body',
+  type: 'array',
+  of: [
+    { type: 'block' }, // Standard text
+    { type: 'image' }, // Custom type
+    { type: 'code' },  // Custom type
+  ]
+})
+```

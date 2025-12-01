@@ -1,0 +1,315 @@
+---
+description: Internationalization (i18n) patterns for Sanity using official plugins and best practices from Sanity Learn.
+globs: schemaTypes/**/*.ts, sanity.config.ts, **/*.tsx
+alwaysApply: false
+---
+
+# Sanity Internationalization (i18n) Rules
+
+## 1. Guiding Principles
+
+### Priority: Easy Authoring Experience
+The structured nature of Sanity schemas and GROQ make it easy to parse localized content for your frontend. **Never** let frontend architecture dictate your localization approach — prioritize the editor experience.
+
+### Avoid Content Duplication
+Don't create nearly identical copies with slight differences (e.g., US vs British English). Use Portable Text marks and custom blocks to swap out words or sections as needed.
+
+## 2. Terminology
+
+| Term | Definition |
+|------|------------|
+| **Internationalization (i18n)** | Designing your frontend to support multiple languages |
+| **Localization** | Adapting content for a specific language/region |
+| **Language Tag** | Code like `en`, `en-US`, `zh-Hant-TW` (per IETF RFC 5646) |
+| **Locale** | A language tag with region info (e.g., `en-US`) |
+
+## 3. Create a Locale Content Type
+
+**Best Practice:** Store locales in Sanity, not just in code. This allows sharing between Studio and frontend.
+
+```typescript
+// schemaTypes/locale.ts
+import { TranslateIcon } from '@sanity/icons'
+import { defineField, defineType } from 'sanity'
+
+export const localeType = defineType({
+  name: 'locale',
+  icon: TranslateIcon,
+  type: 'document',
+  fields: [
+    defineField({
+      name: 'name',
+      type: 'string',
+      description: 'The name of the language (in that language)',
+      validation: (rule) => rule.required(),
+    }),
+    defineField({
+      name: 'tag',
+      type: 'string',
+      description: 'IANA language tag (e.g., en, en-US, zh-Hant-TW)',
+      validation: (rule) =>
+        rule.required()
+          .regex(
+            /^[a-z]{2,3}(?:-[A-Z][a-z]{3})?(?:-(?:[A-Z]{2}|\d{3}))?(?:-[a-zA-Z0-9]{5,8}|-[0-9][a-zA-Z0-9]{3})*$/,
+            { name: 'IANA language tag', invert: false }
+          )
+          .error('Must be a valid IANA language tag'),
+    }),
+    defineField({
+      name: 'fallback',
+      type: 'reference',
+      description: "Locale to show if content isn't available",
+      to: [{ type: 'locale' }],
+    }),
+    defineField({
+      name: 'default',
+      type: 'boolean',
+      description: 'Is this the default locale?',
+      validation: (rule) =>
+        rule.custom(async (value, context) => {
+          if (!value) return true
+          const { getClient } = context
+          const client = getClient({ apiVersion: '2024-01-01' })
+          const existing = await client.fetch(
+            `*[_type == "locale" && default == true && _id != $id][0]`,
+            { id: context?.document?._id }
+          )
+          return existing
+            ? `Only one default allowed. ${existing.tag} is currently default.`
+            : true
+        }),
+    }),
+  ],
+  preview: {
+    select: { title: 'name', subtitle: 'tag' },
+  },
+})
+```
+
+### Restrict Locale Editing to Admins
+```typescript
+// structure.ts
+export const structure: StructureResolver = (S, context) => {
+  const { currentUser } = context
+  const isAdmin = currentUser?.roles.some((role) => role.name === 'administrator')
+
+  return S.list()
+    .title('Content')
+    .items([
+      ...S.documentTypeListItems().filter((item) => {
+        if (item.getId() === 'locale') return isAdmin
+        return true
+      }),
+    ])
+}
+```
+
+## 4. Choose Your Localization Method
+
+| Content Type | Examples | Recommended Method |
+|--------------|----------|-------------------|
+| **Structured** (things) | Products, People, Locations, Categories | Field-level |
+| **Presentation** (UI) | Pages, Posts, Components | Document-level |
+
+### Decision Questions
+1. **Are fields shared across languages?** → Field-level
+2. **Should changes be "global" for all locales?** (e.g., reordering components) → Field-level
+3. **Is content mostly the same except regional differences?** → Field-level with PT marks
+4. **Need to publish language versions independently?** → Document-level
+
+## 5. Document-Level Localization
+
+Use the **@sanity/document-internationalization** plugin.
+
+```bash
+npm install @sanity/document-internationalization
+```
+
+### Configuration
+```typescript
+// sanity.config.ts
+import { documentInternationalization } from '@sanity/document-internationalization'
+
+export default defineConfig({
+  plugins: [
+    documentInternationalization({
+      // Fetch from Content Lake
+      supportedLanguages: (client) =>
+        client.fetch(`*[_type == "locale"]{ "id": tag, "title": name }`),
+      // Document types to localize
+      schemaTypes: ['post', 'page'],
+    }),
+  ],
+})
+```
+
+### Add Language Field to Schema
+```typescript
+// In each schema type listed in schemaTypes
+defineField({
+  name: 'language',
+  type: 'string',
+  readOnly: true,
+  hidden: true,
+})
+```
+
+### Querying Translated Documents
+```groq
+// Get document in specific language
+*[_type == "post" && language == $locale && slug.current == $slug][0]
+
+// Get all translations via metadata document
+*[_type == "translation.metadata" && references($docId)][0] {
+  translations[] { 
+    _key,
+    value-> { title, slug, language }
+  }
+}
+```
+
+## 6. Field-Level Localization
+
+Use **sanity-plugin-internationalized-array** (NOT localized objects — they hit attribute limits).
+
+```bash
+npm install sanity-plugin-internationalized-array
+```
+
+### Configuration
+```typescript
+// sanity.config.ts
+import { internationalizedArray } from 'sanity-plugin-internationalized-array'
+
+export default defineConfig({
+  plugins: [
+    internationalizedArray({
+      languages: (client) =>
+        client.fetch(`*[_type == "locale"]{ "id": tag, "title": name }`),
+      fieldTypes: ['string', 'text', 'simpleBlockContent'],
+    }),
+  ],
+})
+```
+
+### Usage in Schema
+```typescript
+// The plugin creates types like `internationalizedArrayString`
+defineField({
+  name: 'jobTitle',
+  type: 'internationalizedArrayString', // Localized string field
+})
+```
+
+### Portable Text Localization
+Create a reusable block content type, then add it to `fieldTypes`:
+
+```typescript
+// schemaTypes/simpleBlockContent.ts
+export default defineType({
+  name: 'simpleBlockContent',
+  type: 'array',
+  of: [
+    {
+      type: 'block',
+      styles: [{ title: 'Normal', value: 'normal' }],
+      lists: [],
+    },
+  ],
+})
+
+// sanity.config.ts
+fieldTypes: ['string', 'simpleBlockContent']
+
+// In your schema
+defineField({
+  name: 'bio',
+  type: 'internationalizedArraySimpleBlockContent',
+})
+```
+
+### Querying Internationalized Arrays
+```groq
+// Get specific locale value
+*[_type == "author"][0] {
+  "jobTitle": jobTitle[_key == $locale][0].value
+}
+
+// With fallback
+*[_type == "author"][0] {
+  "jobTitle": coalesce(
+    jobTitle[_key == $locale][0].value,
+    jobTitle[_key == "en"][0].value
+  )
+}
+```
+
+## 7. AI-Powered Translation
+
+Use **@sanity/assist** for automated translations.
+
+```bash
+npm install @sanity/assist
+```
+
+```typescript
+// sanity.config.ts
+import { assist } from '@sanity/assist'
+
+export default defineConfig({
+  plugins: [
+    assist({
+      translate: {
+        // For document-level localization
+        document: {
+          languageField: 'language',
+        },
+        // For field-level localization
+        field: {
+          languages: (client) =>
+            client.fetch(`*[_type == "locale"]{ "id": tag, "title": name }`),
+          documentTypes: ['author', 'category'],
+        },
+      },
+    }),
+  ],
+})
+```
+
+## 8. UI Enhancement
+
+Use **@sanity/language-filter** to let editors show/hide locales:
+
+```bash
+npm install @sanity/language-filter
+```
+
+## 9. Frontend URL Best Practices
+
+**Always include locale in the URL** for SEO:
+- ✅ `yoursite.com/en/my-page` (English)
+- ✅ `yoursite.com/fr/my-page` (French)
+- ✅ `yoursite.com/my-page` → redirects to `yoursite.com/en/my-page`
+
+**Avoid:** Having the default locale at the root without a locale prefix — this causes edge cases and hurts SEO in specific markets.
+
+```typescript
+// Next.js middleware example
+import { NextRequest, NextResponse } from 'next/server'
+
+export function middleware(request: NextRequest) {
+  const pathname = request.nextUrl.pathname
+  
+  // Check if pathname is missing locale
+  const pathnameIsMissingLocale = locales.every(
+    (locale) => !pathname.startsWith(`/${locale}/`) && pathname !== `/${locale}`
+  )
+
+  if (pathnameIsMissingLocale) {
+    // Redirect to default locale
+    return NextResponse.redirect(
+      new URL(`/${defaultLocale}${pathname}`, request.url)
+    )
+  }
+}
+```

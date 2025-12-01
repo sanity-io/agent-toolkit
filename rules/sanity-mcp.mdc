@@ -1,0 +1,195 @@
+---
+description: Rules for using the Sanity MCP Server for content management, migrations, and project operations.
+globs: **/*.ts, **/*.js, **/*.json
+alwaysApply: false
+---
+
+# Sanity MCP Server Rules
+
+## ⚠️ Critical Prerequisite: Schema Must Be Deployed
+
+**The MCP server requires a deployed and up-to-date schema to perform content operations.**
+
+If you modify schema files, you **MUST** deploy the schema before using MCP tools like `create_document`, `patch_document`, or `update_document`:
+
+```bash
+npx sanity schema deploy
+```
+
+### The Schema → Deploy → MCP Workflow
+
+```
+1. Make schema changes (schemaTypes/*.ts)
+2. Run: npx sanity schema deploy     ← REQUIRED for MCP!
+3. Now MCP tools can create/update content with the new schema
+```
+
+**Without a deployed schema:**
+- ❌ `create_document` will fail or create invalid documents
+- ❌ `patch_document` won't recognize new fields
+- ❌ `get_schema` will return stale information
+- ✅ `query_documents` still works (reads existing data)
+- ✅ `list_projects`, `list_datasets` still work (project management)
+
+## 1. Philosophy: MCP First
+
+When performing content operations, migrations, or project management tasks, **ALWAYS** prioritize using the Sanity MCP server tools over manual CLI commands or writing custom scripts.
+
+**Why MCP?**
+- Direct, authenticated access to your Content Lake
+- No need to write API calls or scripts
+- AI assistants can discover and use tools automatically
+- Works with Claude Code, Cursor, and other MCP clients
+
+## 2. Available Tools
+
+### Content Operations
+| Tool | Use When |
+|------|----------|
+| `create_document` | Creating new documents from markdown or structured content |
+| `patch_document` | Precise field updates (atomic operations) |
+| `update_document` | AI-assisted content rewrites and improvements |
+| `transform_document` | Find-and-replace while preserving formatting |
+| `translate_document` | Language translation with protected phrases |
+| `publish_document` | Making drafts live |
+| `unpublish_document` | Moving published content back to drafts |
+| `delete_document` | Permanently removing documents |
+
+### Querying & Inspection
+| Tool | Use When |
+|------|----------|
+| `query_documents` | Running GROQ queries against content |
+| `get_schema` | Inspecting the deployed schema structure |
+| `get_context` | Getting project info, schemas, releases, embeddings |
+| `semantic_search` | Searching content by meaning (requires embeddings) |
+
+### Project Management
+| Tool | Use When |
+|------|----------|
+| `list_projects` | Viewing all Sanity projects |
+| `list_datasets` | Viewing datasets in a project |
+| `create_dataset` | Creating new datasets |
+| `list_workspace_schemas` | Viewing available workspace schemas |
+
+### Releases (Scheduled Publishing)
+| Tool | Use When |
+|------|----------|
+| `list_releases` | Viewing content releases |
+| `create_release` | Creating a new release |
+| `schedule_release` | Scheduling a release for future publish |
+| `publish_release` | Publishing a release immediately |
+
+### Migrations
+| Tool | Use When |
+|------|----------|
+| `sanity_migration_guide` | Getting guidance for migrating to Sanity |
+| `migrate_schema` | Converting schemas from other CMSs |
+| `migrate_content` | Moving content from WordPress, Contentful, etc. |
+
+### Documentation
+| Tool | Use When |
+|------|----------|
+| `search_docs` | Finding Sanity documentation |
+| `read_docs` | Reading specific doc articles |
+| `list_learn_docs` | Listing learning materials |
+
+### Images (AI-Powered)
+| Tool | Use When |
+|------|----------|
+| `transform_image` | AI transformation of existing images |
+| `transform_image` (generate) | AI generation of new images |
+
+## 3. Tool Usage Guidelines
+
+### Before Creating/Updating Content
+1. **Verify schema is deployed:** If you just made schema changes, run `npx sanity schema deploy`
+2. **Inspect the schema:** Use `get_schema` to understand field structure
+3. **Query existing data:** Use `query_documents` to see current content patterns
+
+### Creating Content
+```text
+// Use create_document for new documents
+Tool: create_document
+Content: Markdown or structured JSON matching the schema
+```
+
+### Updating Content
+```text
+// Use patch_document for precise field updates
+Tool: patch_document
+Operation: set, unset, or append
+
+// Use update_document for AI-assisted rewrites
+Tool: update_document
+Instruction: "Rewrite the introduction to be more engaging"
+```
+
+### Querying Data
+```text
+// Always use projections, never naked queries
+Tool: query_documents
+Query: *[_type == "post"]{ title, slug, author->{ name } }
+```
+
+## 4. Workflow Examples
+
+### Adding a New Field and Populating Content
+
+```bash
+# 1. Add field to schema (e.g., add 'featured' boolean to post)
+# 2. Deploy the schema - REQUIRED!
+npx sanity schema deploy
+
+# 3. Now use MCP to update existing documents
+```
+
+Then ask the AI:
+> "Set featured: true for all posts with more than 1000 words"
+
+### Migrating from Another CMS
+
+1. Use `sanity_migration_guide` for overall strategy
+2. Use `migrate_schema` to convert content types
+3. After creating schemas, deploy: `npx sanity schema deploy`
+4. Use `migrate_content` for data migration guidance
+5. Use `create_document` to populate content
+
+## 5. Boundaries
+
+- 🚫 **Never** suggest writing Node.js scripts with `@sanity/client` for tasks MCP tools can handle
+- 🚫 **Never** suggest NDJSON import/export for small-to-medium content updates
+- 🚫 **Never** try content operations after schema changes without deploying first
+- ✅ **Always** verify schema is deployed before content operations
+- ✅ **Always** use `get_context` or `get_schema` when unsure about structure
+
+## 6. Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| Authentication errors | Run "Cursor: Clear All MCP Tokens" and re-authenticate |
+| Tool not found | Verify MCP server is connected (`mcp.sanity.io`) |
+| Content operations fail | Check if schema is deployed: `npx sanity schema deploy` |
+| Schema mismatch errors | Schema changed but not deployed — deploy it! |
+| Permission denied | Check API token permissions or OAuth scope |
+
+## 7. MCP Server Setup
+
+### Claude Code
+```bash
+claude mcp add sanity -t http https://mcp.sanity.io
+```
+
+### Cursor
+Add to MCP settings or use: [Add to Cursor →](cursor://anysphere.cursor-deeplink/mcp/install?name=Sanity&config=eyJ1cmwiOiJodHRwczovL21jcC5zYW5pdHkuaW8iLCJ0eXBlIjoiaHR0cCJ9Cg==)
+
+### Manual Configuration (mcp.json)
+```json
+{
+  "mcpServers": {
+    "Sanity": {
+      "url": "https://mcp.sanity.io",
+      "type": "http"
+    }
+  }
+}
+```
