@@ -6,6 +6,8 @@ alwaysApply: false
 
 # Sanity + Shopify + Hydrogen Rules
 
+**Package:** [`hydrogen-sanity`](https://github.com/sanity-io/hydrogen-sanity) — requires `@shopify/hydrogen >= 2025.5.0`
+
 ## 1. Architecture Overview
 
 | Component | Purpose |
@@ -35,7 +37,7 @@ SESSION_SECRET="<random-string>"
 SANITY_PROJECT_ID="..."
 SANITY_DATASET="production"
 SANITY_API_VERSION="v2025-01-01"
-SANITY_API_TOKEN="sk..."  # Viewer token for previews
+SANITY_PREVIEW_TOKEN="sk..."  # Viewer token for previews
 ```
 
 ## 3. Sanity Client Setup
@@ -73,38 +75,85 @@ const sanity = await createSanityContext({
     }
   },
   preview: {
-    token: env.SANITY_API_TOKEN,
+    token: env.SANITY_PREVIEW_TOKEN,
     session: previewSession,
   }
 })
 ```
 
-## 4. Data Fetching Pattern
-
-Hydrogen routes fetch from **both** Shopify (GraphQL) and Sanity (GROQ):
-
+### Provider Setup (entry.server.tsx)
 ```typescript
-// web/app/routes/products.$handle.tsx
-export async function loader({params, context: {storefront, sanity}}: LoaderFunctionArgs) {
-  // 1. Shopify: Commerce data (price, variants, inventory)
-  const {product} = await storefront.query<{product: Product}>(
-    `#graphql
-      query Product($handle: String!) {
-        product(handle: $handle) { id title priceRange { ... } }
-      }
-    `,
-    {variables: params},
+const {SanityProvider} = context.sanity
+
+const body = await renderToReadableStream(
+  <NonceProvider>
+    <SanityProvider>
+      <ServerRouter context={reactRouterContext} url={request.url} nonce={nonce} />
+    </SanityProvider>
+  </NonceProvider>,
+)
+```
+
+### Root Layout (root.tsx)
+```typescript
+import {Sanity} from 'hydrogen-sanity'
+
+export function Layout({children}) {
+  const nonce = useNonce()
+  return (
+    <html>
+      <body>
+        {children}
+        <Sanity nonce={nonce} />  {/* Required for client-side */}
+        <Scripts nonce={nonce} />
+      </body>
+    </html>
   )
+}
+```
 
-  // 2. Sanity: Editorial content (rich text, custom media)
-  const PRODUCT_QUERY = `*[_type == "product" && store.slug.current == $handle][0]{
-    body,
-    "image": store.previewImageUrl
-  }`
-  
-  const sanityData = await sanity.fetch(PRODUCT_QUERY, params)
+## 4. Data Fetching
 
-  return {product, sanityData}
+Fetch from **both** Shopify (GraphQL) and Sanity (GROQ). Use `defineQuery` for TypeGen support.
+
+### Recommended: `query` + `Query` component
+```typescript
+import {defineQuery} from 'groq'
+import {Query} from 'hydrogen-sanity'
+
+const PRODUCT_QUERY = defineQuery(`*[_type == "product" && store.slug.current == $handle][0]{ body }`)
+
+// Loader
+export async function loader({params, context: {sanity}}: LoaderFunctionArgs) {
+  const initial = await context.sanity.query(PRODUCT_QUERY, params)
+  return {initial}
+}
+
+// Component - auto-enables live preview when active
+export default function ProductPage({loaderData}) {
+  return (
+    <Query query={PRODUCT_QUERY} options={{initial: loaderData.initial}}>
+      {(data) => <div>{data?.body}</div>}
+    </Query>
+  )
+}
+```
+
+### Alternative methods
+| Method | Use Case |
+|--------|----------|
+| `sanity.query()` + `Query` | Recommended - auto preview mode |
+| `sanity.loadQuery()` | Manual loader integration |
+| `sanity.fetch()` | No preview needed, lightweight |
+| `sanity.client` | Mutations in actions |
+
+### Images
+```typescript
+import {useImageUrl} from 'hydrogen-sanity'
+
+function Hero({image}) {
+  const imageUrl = useImageUrl(image)
+  return <img src={imageUrl.width(1200).height(600).url()} />
 }
 ```
 
