@@ -1,0 +1,88 @@
+---
+description: Project structure patterns for Sanity projects including monorepo and embedded Studio setups.
+globs: sanity.config.ts, sanity.cli.ts, package.json, pnpm-workspace.yaml
+alwaysApply: false
+---
+
+# Sanity Project Structure
+
+## Monorepo (Recommended)
+
+Best for larger teams or projects with multiple frontends.
+
+```
+your-project/
+├── apps/
+│   ├── studio/                 # Sanity Studio
+│   │   ├── schemaTypes/
+│   │   │   ├── index.ts
+│   │   │   ├── documents/
+│   │   │   ├── objects/
+│   │   │   └── blocks/
+│   │   ├── sanity.config.ts
+│   │   └── structure.ts
+│   └── app/                    # Front-end (Next.js, Remix, etc.)
+│       └── sanity/
+│           ├── client.ts
+│           ├── queries.ts
+│           └── types.ts        # Generated types
+├── sanity-typegen.json
+└── pnpm-workspace.yaml
+```
+
+## Embedded Studio (Next.js Only)
+
+Best for smaller projects with a single Next.js frontend.
+
+```
+your-project/
+├── src/
+│   ├── app/                    # Next.js App Router
+│   │   └── studio/[[...tool]]/ # Embedded Studio route
+│   └── sanity/
+│       ├── lib/
+│       │   ├── client.ts
+│       │   ├── live.ts         # defineLive setup
+│       │   └── queries.ts
+│       └── schemaTypes/
+│           ├── index.ts
+│           ├── documents/
+│           ├── objects/
+│           └── blocks/
+├── sanity.config.ts
+├── sanity.cli.ts
+└── sanity-typegen.json
+```
+
+## File Naming Conventions
+
+- **kebab-case** for all files: `user-profile.ts`, `hero-block.ts`
+- `.ts` for schemas/utilities, `.tsx` for React components
+- Each schema exports a named const matching filename
+
+## Schema Directory Structure
+
+```
+schemaTypes/
+├── index.ts              # Exports all types
+├── documents/            # Standalone content types
+│   ├── post.ts
+│   └── author.ts
+├── objects/              # Embeddable/reusable types
+│   ├── seo.ts
+│   └── link.ts
+├── blocks/               # Portable Text blocks
+│   ├── hero.ts
+│   └── callout.ts
+└── shared/               # Shared field definitions
+    └── seoFields.ts
+```
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| `sanity.config.ts` | Studio configuration (plugins, schema, structure) |
+| `sanity.cli.ts` | CLI configuration (project ID, dataset) |
+| `sanity-typegen.json` | TypeGen configuration |
+| `structure.ts` | Custom desk structure |

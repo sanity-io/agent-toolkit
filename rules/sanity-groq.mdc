@@ -1,7 +1,7 @@
 ---
 description: Guidelines for GROQ queries, type safety, performance optimization, and syntax highlighting.
 globs: **/*.ts, **/*.tsx, **/*.js
-alwaysApply: true
+alwaysApply: false
 ---
 
 # GROQ Query Maintenance & Best Practices

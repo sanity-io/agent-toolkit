@@ -1,7 +1,7 @@
 ---
-description: Comprehensive rules for defining Sanity Content Models (Schemas), including field definitions, strict typing, and file organization.
+description: Rules for defining Sanity Content Models (Schemas), including field definitions, strict typing, and validation patterns.
 globs: schemaTypes/**/*.ts, sanity.config.ts
-alwaysApply: true
+alwaysApply: false
 ---
 
 # Sanity Schema Best Practices
@@ -45,24 +45,7 @@ export const article = defineType({
 })
 ```
 
-## 3. Directory Structure & Shared Fields
-
-### Organization
-Follow this layout. Extract shared fields to keep schemas DRY.
-
-```text
-/src
-  /schemaTypes
-    /documents
-      article.ts
-    /objects
-      seo.ts
-    /shared
-      seoFields.ts  <-- Shared definitions
-    index.ts
-```
-
-### Shared Fields Pattern
+## 3. Shared Fields Pattern
 Export arrays of fields to reuse common patterns (e.g., SEO, standard page headers).
 
 ```typescript
@@ -229,55 +212,7 @@ defineField({
 2.  **Phase 2:** Update frontend to use new fields (with fallbacks). Run migration scripts to move data.
 3.  **Phase 3:** Once `oldTitle` is undefined for all documents, delete the field definition.
 
-## 7. Deployment & Management (Schema)
-
-### Understanding Schema Deployment
-
-There are **two different deployment commands**:
-
-| Command | Purpose | When to Use |
-|---------|---------|-------------|
-| `npx sanity deploy` | Deploys the full Studio app | When you want to update the hosted Studio |
-| `npx sanity schema deploy` | Uploads schema definition only | **After any schema change** (see below) |
-
-### When is `schema deploy` Required?
-
-**Required for:**
-- ⚠️ **MCP Server operations** (create_document, patch_document, etc.) — **CRITICAL!**
-- Embedded Studios (schema lives in Content Lake, not bundled)
-- Cloud Functions validating against schema
-- Scheduled Publishing features
-- Cross-dataset references with schema validation
-
-**MCP Workflow (Most Common):**
-If you're using the Sanity MCP server for content operations, you **MUST** deploy the schema after any changes, or MCP tools won't recognize your new fields/types.
-
-```bash
-# After schema changes, ALWAYS deploy for MCP:
-npx sanity schema deploy
-```
-
-**NOT required for:**
-- Local-only development without MCP
-- Self-hosted Studios where you only use the local dev server
-- Purely frontend-focused development
-
-### Standard Workflow
-```bash
-# 1. Modify schema files
-# 2. Generate TypeScript types
-npm run typegen
-
-# 3. Deploy schema (REQUIRED for MCP, embedded Studios, cloud features)
-npx sanity schema deploy
-
-# 4. Start dev server to see changes
-npx sanity dev
-```
-
-**Remember:** Schema deployment is fast (~2 seconds). When in doubt, deploy it!
-
-## 8. Validation Patterns
+## 7. Validation Patterns
 
 Beyond `rule.required()`, Sanity offers powerful validation options.
 
@@ -372,9 +307,3 @@ defineField({
   })
 })
 ```
-
-## 9. Content Management via MCP
-**Prefer using the Sanity MCP Server tools** for content operations instead of manual Studio edits when possible.
--   **Create/Update:** Use `sanity_mcp_create_document` or `sanity_mcp_patch_document`.
--   **Query:** Use `sanity_mcp_query_documents` to inspect data.
--   **Migrate:** Use MCP tools to script content migrations safely.
