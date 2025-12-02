@@ -1,10 +1,10 @@
 ---
-description: Internationalization (i18n) patterns for Sanity using official plugins and best practices from Sanity Learn.
+description: Localization patterns for Sanity using official plugins and best practices.
 globs: schemaTypes/**/*.ts, sanity.config.ts, **/*.tsx
 alwaysApply: false
 ---
 
-# Sanity Internationalization (i18n) Rules
+# Sanity Localization Rules
 
 ## 1. Guiding Principles
 
@@ -37,72 +37,16 @@ export const localeType = defineType({
   icon: TranslateIcon,
   type: 'document',
   fields: [
-    defineField({
-      name: 'name',
-      type: 'string',
-      description: 'The name of the language (in that language)',
-      validation: (rule) => rule.required(),
-    }),
-    defineField({
-      name: 'tag',
-      type: 'string',
-      description: 'IANA language tag (e.g., en, en-US, zh-Hant-TW)',
-      validation: (rule) =>
-        rule.required()
-          .regex(
-            /^[a-z]{2,3}(?:-[A-Z][a-z]{3})?(?:-(?:[A-Z]{2}|\d{3}))?(?:-[a-zA-Z0-9]{5,8}|-[0-9][a-zA-Z0-9]{3})*$/,
-            { name: 'IANA language tag', invert: false }
-          )
-          .error('Must be a valid IANA language tag'),
-    }),
-    defineField({
-      name: 'fallback',
-      type: 'reference',
-      description: "Locale to show if content isn't available",
-      to: [{ type: 'locale' }],
-    }),
-    defineField({
-      name: 'default',
-      type: 'boolean',
-      description: 'Is this the default locale?',
-      validation: (rule) =>
-        rule.custom(async (value, context) => {
-          if (!value) return true
-          const { getClient } = context
-          const client = getClient({ apiVersion: '2024-01-01' })
-          const existing = await client.fetch(
-            `*[_type == "locale" && default == true && _id != $id][0]`,
-            { id: context?.document?._id }
-          )
-          return existing
-            ? `Only one default allowed. ${existing.tag} is currently default.`
-            : true
-        }),
-    }),
+    defineField({ name: 'name', type: 'string', validation: (r) => r.required() }),
+    defineField({ name: 'tag', type: 'string', description: 'IANA tag (en, en-US)', validation: (r) => r.required() }),
+    defineField({ name: 'fallback', type: 'reference', to: [{ type: 'locale' }] }),
+    defineField({ name: 'default', type: 'boolean' }),
   ],
-  preview: {
-    select: { title: 'name', subtitle: 'tag' },
-  },
+  preview: { select: { title: 'name', subtitle: 'tag' } },
 })
 ```
 
-### Restrict Locale Editing to Admins
-```typescript
-// structure.ts
-export const structure: StructureResolver = (S, context) => {
-  const { currentUser } = context
-  const isAdmin = currentUser?.roles.some((role) => role.name === 'administrator')
-
-  return S.list()
-    .title('Content')
-    .items([
-      ...S.documentTypeListItems().filter((item) => {
-        if (item.getId() === 'locale') return isAdmin
-        return true
-      }),
-    ])
-}
-```
+**Tip:** Restrict locale editing to admins via Structure by filtering `locale` from non-admin users.
 
 ## 4. Choose Your Localization Method
 
@@ -287,29 +231,9 @@ npm install @sanity/language-filter
 ## 9. Frontend URL Best Practices
 
 **Always include locale in the URL** for SEO:
-- ✅ `yoursite.com/en/my-page` (English)
-- ✅ `yoursite.com/fr/my-page` (French)
-- ✅ `yoursite.com/my-page` → redirects to `yoursite.com/en/my-page`
+- ✅ `yoursite.com/en/my-page` → `yoursite.com/fr/my-page`
+- ✅ `yoursite.com/my-page` → redirects to default locale
 
-**Avoid:** Having the default locale at the root without a locale prefix — this causes edge cases and hurts SEO in specific markets.
+**Avoid:** Having the default locale at root without prefix — causes SEO edge cases.
 
-```typescript
-// Next.js middleware example
-import { NextRequest, NextResponse } from 'next/server'
-
-export function middleware(request: NextRequest) {
-  const pathname = request.nextUrl.pathname
-  
-  // Check if pathname is missing locale
-  const pathnameIsMissingLocale = locales.every(
-    (locale) => !pathname.startsWith(`/${locale}/`) && pathname !== `/${locale}`
-  )
-
-  if (pathnameIsMissingLocale) {
-    // Redirect to default locale
-    return NextResponse.redirect(
-      new URL(`/${defaultLocale}${pathname}`, request.url)
-    )
-  }
-}
-```
+Use Next.js middleware (or framework equivalent) to redirect paths missing a locale prefix to the default locale.

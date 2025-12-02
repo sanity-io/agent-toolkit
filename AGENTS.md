@@ -45,10 +45,9 @@ npx sanity --help               # List all CLI commands
 | **Rich Text** | `portable text`, `rich text`, `block content`, `serializer` | `rules/sanity-portable-text.mdc` |
 | **Images** | `image`, `urlFor`, `crop`, `hotspot`, `lqip` | `rules/sanity-image.mdc` |
 | **Desk/Structure** | `structure`, `desk`, `sidebar`, `singleton`, `grouping` | `rules/sanity-structure.mdc` |
-| **Internationalization** | `i18n`, `translation`, `localization`, `language`, `multilingual` | `rules/sanity-i18n.mdc` |
+| **Localization** | `i18n`, `translation`, `localization`, `language`, `multilingual` | `rules/sanity-localization.mdc` |
 | **SEO** | `seo`, `metadata`, `sitemap`, `og image`, `open graph`, `json-ld`, `redirect` | `rules/sanity-seo.mdc` |
 | **Shopify/Hydrogen** | `shopify`, `hydrogen`, `e-commerce`, `storefront`, `sanity connect` | `rules/sanity-hydrogen.mdc` |
-| **Testing** | `test`, `vitest`, `mock`, `fixture`, `ci`, `validation test` | `rules/sanity-testing.mdc` |
 
 ### Using the Knowledge Router
 
