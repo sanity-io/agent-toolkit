@@ -8,14 +8,24 @@ globs: app/**/*.tsx, src/sanity/**/*.ts, sanity.config.ts, studio/**/*.ts
 ## 1. Architecture Patterns
 
 ### Option A: Embedded Studio (Recommended)
-The Studio lives inside your Next.js app at `/app/studio/[[...tool]]/page.tsx`.
-- **Best for:** Most Next.js projects. Unified deployment.
-- **Config:** `sanity.config.ts` lives in the project root.
+**Best for:** Most Next.js projects. Unified deployment, simpler setup.
 
-### Option B: Standalone / Monorepo
-The Studio lives in a separate folder (e.g., `apps/studio`) or repository.
-- **Best for:** Teams requiring strict dependency separation.
+The Studio lives inside your Next.js app at `/app/studio/[[...tool]]/page.tsx`.
+- **Config:** `sanity.config.ts` lives in the project root.
+- See `sanity-project-structure` rule for detailed structure.
+
+### Option B: Monorepo (Alternative)
+**Best for:** Separation of concerns, multiple frontends, or strict dependency isolation.
+
+The Studio and Next.js app live in separate folders:
+```
+apps/
+├── studio/     # Sanity Studio (standalone)
+└── web/        # Next.js frontend
+```
+
 - **Config:** Add your Next.js app URL to **CORS Origins** in Sanity project settings.
+- See `sanity-project-structure` rule for detailed structure.
 
 ## 2. Data Fetching (Live Content API)
 

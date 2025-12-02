@@ -6,33 +6,9 @@ alwaysApply: false
 
 # Sanity Project Structure
 
-## Monorepo (Recommended)
+## Embedded Studio (Recommended for Next.js)
 
-Best for larger teams or projects with multiple frontends.
-
-```
-your-project/
-├── apps/
-│   ├── studio/                 # Sanity Studio
-│   │   ├── schemaTypes/
-│   │   │   ├── index.ts
-│   │   │   ├── documents/
-│   │   │   ├── objects/
-│   │   │   └── blocks/
-│   │   ├── sanity.config.ts
-│   │   └── structure.ts
-│   └── app/                    # Front-end (Next.js, Remix, etc.)
-│       └── sanity/
-│           ├── client.ts
-│           ├── queries.ts
-│           └── types.ts        # Generated types
-├── sanity-typegen.json
-└── pnpm-workspace.yaml
-```
-
-## Embedded Studio (Next.js Only)
-
-Best for smaller projects with a single Next.js frontend.
+Best for most Next.js projects. Unified deployment, simpler setup.
 
 ```
 your-project/
@@ -53,6 +29,40 @@ your-project/
 ├── sanity.cli.ts
 └── sanity-typegen.json
 ```
+
+## Monorepo (Alternative)
+
+Best when you need separation of concerns, multiple frontends, or strict dependency isolation.
+
+```
+your-project/
+├── apps/
+│   ├── studio/                 # Sanity Studio (standalone)
+│   │   ├── src/
+│   │   │   └── schemaTypes/
+│   │   │       ├── index.ts
+│   │   │       ├── documents/
+│   │   │       ├── objects/
+│   │   │       └── blocks/
+│   │   ├── sanity.config.ts
+│   │   ├── sanity.cli.ts
+│   │   └── package.json
+│   └── web/                    # Next.js (or other framework)
+│       ├── src/
+│       │   ├── app/
+│       │   └── sanity/
+│       │       ├── client.ts
+│       │       ├── live.ts
+│       │       └── queries.ts
+│       └── package.json
+├── sanity-typegen.json
+├── pnpm-workspace.yaml
+└── package.json
+```
+
+**Setup:**
+1. Add web app URL to CORS origins in Sanity project settings
+2. Configure `sanity-typegen.json` to read schema from `apps/studio` and output types to `apps/web`
 
 ## File Naming Conventions
 
