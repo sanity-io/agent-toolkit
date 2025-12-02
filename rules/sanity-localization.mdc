@@ -98,6 +98,39 @@ defineField({
 })
 ```
 
+### Initial Value Templates
+Pre-set language when creating documents outside the translation UI:
+
+```typescript
+// sanity.config.ts
+import { template } from 'sanity'
+
+export default defineConfig({
+  // ...
+  document: {
+    newDocumentOptions: (prev, { creationContext }) => {
+      // Filter to only show base language in "New document" menu
+      // The plugin handles creating translations from there
+      return prev.filter((item) => 
+        !['post', 'page'].includes(item.templateId) || 
+        item.parameters?.language === 'en'
+      )
+    },
+  },
+  // Initial value templates for each language
+  templates: (prev) => [
+    ...prev,
+    template.initial({
+      id: 'post-en',
+      title: 'Post (English)',
+      schemaType: 'post',
+      parameters: [{name: 'language', type: 'string'}],
+      value: ({language}) => ({language}),
+    }),
+  ],
+})
+```
+
 ### Querying Translated Documents
 ```groq
 // Get document in specific language
