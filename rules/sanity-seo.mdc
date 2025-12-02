@@ -257,52 +257,29 @@ const nextConfig: NextConfig = {
 
 ## 7. Dynamic Open Graph Images
 
-Generate OG images on-the-fly using Next.js Edge Runtime.
+Generate OG images on-the-fly using Next.js Edge Runtime at `/api/og`.
 
-### API Route
 ```typescript
 // app/api/og/route.tsx
 import { ImageResponse } from "next/og";
-import { client } from "@/sanity/lib/client";
-
 export const runtime = "edge";
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const id = searchParams.get("id");
-  
+  const id = new URL(request.url).searchParams.get("id");
   if (!id) return new Response("Missing id", { status: 400 });
 
-  const data = await client.fetch(
-    `*[_id == $id][0]{ title, "image": mainImage.asset->{ url, metadata { palette } } }`,
-    { id }
-  );
-
-  const bgColor = data?.image?.metadata?.palette?.vibrant?.background ?? "#3B82F6";
+  const data = await client.fetch(`*[_id == $id][0]{ title }`, { id });
 
   return new ImageResponse(
-    (
-      <div tw="flex w-full h-full bg-blue-500 text-white p-10" style={{ background: bgColor }}>
-        <h1 tw="text-6xl font-bold">{data?.title || "Untitled"}</h1>
-      </div>
-    ),
+    <div tw="flex w-full h-full bg-blue-500 text-white p-10">
+      <h1 tw="text-6xl font-bold">{data?.title || "Untitled"}</h1>
+    </div>,
     { width: 1200, height: 630 }
   );
 }
 ```
 
-### Usage in Metadata
-```typescript
-metadata.openGraph = {
-  images: {
-    url: page.seo.image
-      ? urlFor(page.seo.image).width(1200).height(630).url()
-      : `/api/og?id=${page._id}`, // Fallback to dynamic generation
-    width: 1200,
-    height: 630,
-  },
-};
-```
+Use as fallback in metadata: `url: page.seo.image ? urlFor(page.seo.image).url() : \`/api/og?id=\${page._id}\``
 
 ## 8. JSON-LD Structured Data
 
@@ -346,42 +323,7 @@ faqs[]->{
 }
 ```
 
-## 9. AI-Generated Social Posts
-
-Use Sanity AI Assist to generate social media copy from existing content.
-
-### Schema
-```typescript
-// schemaTypes/socialType.ts
-export const socialType = defineType({
-  name: "social",
-  title: "Social",
-  type: "object",
-  fields: [
-    defineField({
-      name: "linkedIn",
-      type: "text",
-      rows: 3,
-    }),
-    defineField({
-      name: "x",
-      description: "Formerly Twitter",
-      type: "text",
-      rows: 2,
-    }),
-  ],
-});
-```
-
-### AI Assist Instruction
-```text
-Take the content from [title] and [body] to generate text that encourages 
-people to click the link when shared on social networks.
-```
-
-Set **Allowed fields** to only write to the Social field.
-
-## 10. Testing Tools
+## 9. Testing Tools
 
 - **Open Graph:** [opengraph.ing](https://opengraph.ing/)
 - **Facebook:** [Sharing Debugger](https://developers.facebook.com/tools/debug/)

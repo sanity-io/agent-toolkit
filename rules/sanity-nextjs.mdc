@@ -260,23 +260,6 @@ export async function POST(req: NextRequest) {
 - Filter: `_type in ["post", "author", "category"]`
 - Projection: `{ "tags": [_type, _type + ":" + slug.current] }`
 
-### Purge All Cache (Development Only)
-
-For debugging, create a route to clear everything:
-
-```typescript
-// src/app/api/revalidate/all/route.ts
-import { revalidatePath } from 'next/cache';
-
-export async function GET() {
-  if (process.env.NODE_ENV === 'development') {
-    revalidatePath('/', 'layout');
-    return Response.json({ message: 'Cache cleared' });
-  }
-  return Response.json({ message: 'Only available in development' });
-}
-```
-
 ### Stale Data After Webhook?
 
 Webhooks fire *before* Sanity CDN updates. If you see stale data:
@@ -335,26 +318,7 @@ export async function generateStaticParams() {
 }
 ```
 
-## 5. Handling Layout Shifts (Advanced)
-
-Real-time updates can cause jarring layout shifts. Use a client component wrapper to opt-in to updates.
-
-```typescript
-// src/app/components/ProductsLayoutShift.tsx
-'use client'
-import { useRouter } from 'next/navigation'
-import { useEffect } from 'react'
-import { toast } from 'sonner' // or your toast library
-
-export function ProductsLayoutShift({ children, ids }: { children: React.ReactNode, ids: string[] }) {
-  const router = useRouter()
-  // ... implementation using useDeferredLayoutShift or similar logic
-  // Trigger toast on change, router.refresh() on click
-  return children
-}
-```
-
-## 6. Setup: Embedded Studio
+## 5. Setup: Embedded Studio
 
 Mount the Studio on a Next.js route.
 
@@ -372,7 +336,7 @@ export default function StudioPage() {
 }
 ```
 
-## 7. Setup: Draft Mode
+## 6. Setup: Draft Mode
 
 Enable Presentation Tool and Visual Editing by setting up a draft mode route.
 
@@ -388,67 +352,9 @@ export const { GET } = defineEnableDraftMode({
 })
 ```
 
-## 8. Error Handling
+## 7. Error Handling
 
-### Page-Level Error Handling
-Use `notFound()` for missing documents and error boundaries for unexpected failures.
-
-```typescript
-import { notFound } from 'next/navigation'
-
-export default async function PostPage({ params }: Props) {
-  const { data } = await sanityFetch({
-    query: POST_QUERY,
-    params: await params
-  })
-
-  // Handle missing document
-  if (!data) {
-    notFound()
-  }
-
-  return <Post data={data} />
-}
-```
-
-### Global Error Boundary
-Create `app/error.tsx` for unexpected Sanity errors:
-
-```typescript
-'use client'
-
-export default function Error({
-  error,
-  reset,
-}: {
-  error: Error & { digest?: string }
-  reset: () => void
-}) {
-  return (
-    <div>
-      <h2>Something went wrong loading content</h2>
-      <button onClick={() => reset()}>Try again</button>
-    </div>
-  )
-}
-```
-
-### Handling GROQ Query Errors
-If using the raw client, wrap in try-catch:
-
-```typescript
-try {
-  const data = await client.fetch(query, params)
-} catch (error) {
-  if (error instanceof Error) {
-    // GROQ syntax errors include helpful messages
-    console.error('Sanity query error:', error.message)
-  }
-  throw error // Re-throw for error boundary
-}
-```
-
-### Common Error Scenarios
+Use `notFound()` for missing documents. Common errors:
 
 | Error | Cause | Solution |
 |-------|-------|----------|
@@ -457,7 +363,17 @@ try {
 | Query syntax error | Invalid GROQ | Test in Vision plugin first |
 | Empty result | Wrong filter/params | Log params, check `_type` spelling |
 
-## 9. Pagination Pattern
+```typescript
+import { notFound } from 'next/navigation'
+
+export default async function PostPage({ params }: Props) {
+  const { data } = await sanityFetch({ query: POST_QUERY, params: await params })
+  if (!data) notFound()
+  return <Post data={data} />
+}
+```
+
+## 8. Pagination Pattern
 
 For listing pages with many entries, use offset-based pagination with a count query.
 

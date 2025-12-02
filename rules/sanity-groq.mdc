@@ -102,9 +102,6 @@ When you add a new field or component to the Schema:
 // Multiple fields (tiebreaker)
 *[_type == "post"] | order(featured desc, publishedAt desc)
 
-// Case-insensitive alphabetical
-*[_type == "author"] | order(lower(name) asc)
-
 // ⚠️ Order BEFORE slice, not after!
 *[_type == "post"] | order(publishedAt desc)[0...10]  // ✅ Correct
 *[_type == "post"][0...10] | order(publishedAt desc)  // ❌ Wrong order
@@ -113,14 +110,12 @@ When you add a new field or component to the Schema:
 ### Slice Notation
 ```groq
 *[_type == "post"][0]       // Single document (object, not array)
-*[_type == "post"][0..5]    // First 6 (inclusive)
 *[_type == "post"][0...5]   // First 5 (exclusive) ← Most common
 *[_type == "post"][$start...$end]  // Pagination with params
 ```
 
 ### Default Values with `coalesce()`
 ```groq
-// Fallback chain
 *[_type == "page"]{
   "title": coalesce(seoTitle, title, "Untitled"),
   "image": coalesce(ogImage, mainImage, defaultImage)
@@ -136,12 +131,6 @@ When you add a new field or component to the Schema:
     stock < 5 => "Low Stock",
     "In Stock"
   )
-}
-
-// Inline conditional projection
-*[_type == "post"]{
-  ...,
-  _type == "post" => { "related": *[_type == "post" && ^._id != _id][0...3] }
 }
 ```
 
@@ -159,7 +148,6 @@ count(*[_type == "post" && defined(slug.current)])
 
 ### Reverse References
 ```groq
-// Find all documents referencing this one
 *[_type == "author"]{
   name,
   "posts": *[_type == "post" && references(^._id)]{ title, slug }
@@ -168,14 +156,12 @@ count(*[_type == "post" && defined(slug.current)])
 
 ### Array Filtering
 ```groq
-// Filter array items inline
 *[_type == "movie"]{
   title,
   "mainCast": castMembers[role == "lead"]->{name}
 }
 
 // Check if value exists in array
-*["featured" in tags]
 *[_type == "post" && "tech" in categories[]->slug.current]
 ```
 
@@ -279,34 +265,14 @@ Computed attributes can't use indexes:
 
 ## 7. API Version Best Practices
 
-### Always Use Dated Versions
-```typescript
-// ✅ Correct: Dated version locks behavior
-const client = createClient({
-  apiVersion: '2024-01-01', // YYYY-MM-DD format
-})
+Always use dated versions (`YYYY-MM-DD`) for consistent behavior:
 
-// ❌ Incorrect: 'v1', 'vX', or 'v2021-03-25' may change behavior
+```typescript
 const client = createClient({
-  apiVersion: 'v1', // Don't use this
+  apiVersion: '2025-11-01', // Use current year-month for new projects
 })
 ```
 
-### Why This Matters
-- Sanity releases API improvements continuously
-- Dated versions ensure **consistent behavior** across deployments
-- New features require using a version after their release date
-
-### Recommended Practice
-1. **New projects:** Use today's date or recent date (e.g., `2024-01-01`)
-2. **Existing projects:** Keep current version unless you need new features
-3. **Upgrading:** Test thoroughly — API behavior may change between versions
-
-### Common Version-Dependent Features
-| Feature | Minimum Version |
-|---------|-----------------|
-| Portable Text v2 | `2021-03-25` |
-| Content Source Maps (Stega) | `2021-03-25` |
-| Live Content API | `2024-06-01` |
-
-**Tip:** Check [sanity.io/docs/api-versioning](https://www.sanity.io/docs/api-versioning) for version changelog.
+- **New projects:** Use current date (e.g., `2025-11-01`)
+- **Existing projects:** Keep current version unless you need new features
+- Dated versions lock behavior; `v1` or `vX` may change unexpectedly
