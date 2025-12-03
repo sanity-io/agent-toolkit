@@ -2,7 +2,45 @@
 
 **Build faster with Sanity.io.** This toolkit equips your AI coding assistant with expert knowledge, interactive skills, and context-aware rules for building structured content platforms.
 
-Supported environments: **Claude Code**, **Cursor**, **Windsurf**, and any editor compatible with `.mdc` rules.
+**Supported via MCP:** Any MCP-compatible AI assistant (Claude Code, Cursor, Cline, etc.) via the Sanity MCP server at [mcp.sanity.io](https://mcp.sanity.io)
+
+**Supported via local rules:** Claude Code, Cursor, Windsurf, and any editor compatible with `.mdc` rules.
+
+---
+
+## 🚀 Quick Start (Recommended)
+
+The fastest way to get started is with the Sanity MCP server plus a minimal AGENTS file.
+
+### Step 1: Install the MCP Server
+
+Install the Sanity MCP server following the instructions at **[mcp.sanity.io](https://mcp.sanity.io)**
+
+This provides:
+- **Load Rules:** `list_sanity_rules` and `get_sanity_rules` give your AI assistant access to always up-to-date versions of the rules in this repo, loaded into context only when needed
+- **Inspect Data:** `query_documents` to see real content structure
+- **Modify Content:** `create_document` and `patch_document` for atomic updates
+- **Manage Project:** `list_datasets`, `create_dataset`, `get_schema`, etc.
+
+**For Cursor users:** [Add Sanity MCP →](cursor://anysphere.cursor-deeplink/mcp/install?name=Sanity&config=eyJ1cmwiOiJodHRwczovL21jcC5zYW5pdHkuaW8iLCJ0eXBlIjoiaHR0cCJ9Cg==)
+
+### Step 2: Add AGENTS-minimal.md to Your Project
+
+Copy [`AGENTS-minimal.md`](./AGENTS-minimal.md) to your project root, or merge its contents into your existing `AGENTS.md`.
+
+This small file (~500 bytes) nudges your AI assistant to use the MCP tools when working on Sanity tasks.
+
+### Step 3: Start Building
+
+Your AI assistant will now:
+1. Call `list_sanity_rules` when starting Sanity work
+2. Load the relevant rules based on your task
+3. Apply best practices automatically
+
+**Example prompts:**
+> "Get started with Sanity"
+> "Scaffold a new 'project' document type with a slug and image."
+> "Setup Visual Editing for my Remix app."
 
 ---
 
@@ -15,11 +53,11 @@ Supported environments: **Claude Code**, **Cursor**, **Windsurf**, and any edito
 
 ---
 
-## 🚀 Quick Start
+## 📦 Alternative: Local Rules Installation
+
+If you prefer to have all rules locally (for offline access or customization), you can install the full rule set.
 
 ### For Claude Code Users
-
-The toolkit is available as a plugin that connects seamlessly to the Sanity MCP Server.
 
 **1. Install the Plugin**
 ```bash
@@ -27,7 +65,6 @@ The toolkit is available as a plugin that connects seamlessly to the Sanity MCP 
 ```
 
 **2. Explore Capabilities**
-Run the help command to see what the agent can do:
 ```bash
 /sanity
 ```
@@ -122,25 +159,13 @@ These files provide passive knowledge to the AI, ensuring generated code follows
 
 ---
 
-## 🔌 MCP Server
-
-This toolkit uses the **Sanity MCP Server** (`https://mcp.sanity.io`) for live data access.
-
-When installed via Claude Code, the plugin automatically configures this connection. This allows the AI to:
-- **Inspect Data:** `query_documents` to see real content structure.
-- **Modify Content:** `create_document` and `patch_document` for atomic updates.
-- **Manage Project:** `list_datasets`, `create_dataset`, `get_schema`, etc.
-
-**For Cursor users:** [Add Sanity MCP →](cursor://anysphere.cursor-deeplink/mcp/install?name=Sanity&config=eyJ1cmwiOiJodHRwczovL21jcC5zYW5pdHkuaW8iLCJ0eXBlIjoiaHR0cCJ9Cg==)
-
----
-
 ## 📂 Repository Structure
 
 ```text
 sanity-io/ai-toolkit/
-├── AGENTS.md                      # Knowledge router & agent behavior
-├── README.md                      # This file
+├── README.md
+├── AGENTS.md                      # Full knowledge router (for local installation)
+├── AGENTS-minimal.md              # Minimal MCP nudge file (recommended)
 ├── rules/                         # Context rules (.mdc)
 │   ├── sanity-schema.mdc          # Schema design patterns
 │   ├── sanity-get-started.mdc     # 3-phase onboarding guide
@@ -170,7 +195,7 @@ sanity-io/ai-toolkit/
 
 ---
 
-## Contributing
+## 🤝 Contributing
 
 Found a better pattern? Missing a framework?
 1. Fork the repo.
