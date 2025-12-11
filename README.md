@@ -77,11 +77,27 @@ See the [Sanity MCP docs](https://www.sanity.io/docs/compute-and-ai/mcp-server) 
 
 For Claude Code users, install the full plugin with skills and slash commands:
 
-```bash
-/plugin install https://github.com/sanity-io/agent-toolkit/tree/main/sanity-plugin
+1. Add the Sanity marketplace:
+
+```
+/plugin marketplace add sanity-io/agent-toolkit
 ```
 
-Then run `/sanity` to explore capabilities.
+2. Install the plugin:
+
+```
+/plugin install sanity-plugin@sanity-agent-toolkit
+```
+
+3. Verify installation: Ask Claude Code: "which skills do you have access to?"
+
+You should see the Sanity skills listed.
+
+4. Start using: Use natural language and skills activate automatically:
+
+> Use the sanity-scaffold skill to create a blog post schema
+
+Or run `/sanity` to explore all capabilities.
 
 ### Option 3: Manual installation
 
