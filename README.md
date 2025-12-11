@@ -26,7 +26,7 @@ Give agents direct access to Sanity projects and always up-to-date agent rules v
 
 #### Configure with Sanity CLI
 
-Run in termnal to detect and configure MCP for Cursor, Claude Code and VS Code automatically:
+Run in terminal to detect and configure MCP for Cursor, Claude Code and VS Code automatically:
 
 ```bash
 npx sanity@latest mcp configure
