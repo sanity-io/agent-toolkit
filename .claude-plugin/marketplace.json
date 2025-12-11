@@ -1,0 +1,36 @@
+{
+  "name": "sanity-agent-toolkit",
+  "owner": {
+    "name": "Sanity",
+    "email": "support@sanity.io",
+    "url": "https://www.sanity.io"
+  },
+  "metadata": {
+    "description": "Official Sanity developer companion for Claude Code. Includes MCP integration, interactive skills, and expert context rules."
+  },
+  "plugins": [
+    {
+      "name": "sanity-plugin",
+      "source": "./sanity-plugin",
+      "description": "Sanity developer companion for Claude Code with slash commands and skills for schema scaffolding, Visual Editing setup, GROQ optimization, TypeGen, and schema management.",
+      "version": "1.0.0",
+      "homepage": "https://github.com/sanity-io/agent-toolkit",
+      "repository": "https://github.com/sanity-io/agent-toolkit",
+      "license": "MIT",
+      "keywords": [
+        "sanity",
+        "cms",
+        "content-lake",
+        "groq",
+        "content",
+        "structured-content",
+        "visual-editing"
+      ],
+      "author": {
+        "name": "Sanity.io Team",
+        "email": "support@sanity.io",
+        "url": "https://www.sanity.io"
+      }
+    }
+  ]
+}

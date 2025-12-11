@@ -1,0 +1,10 @@
+{
+  "name": "sanity-plugin",
+  "version": "1.0.0",
+  "description": "Sanity developer companion for Claude Code with slash commands and skills for schema scaffolding, Visual Editing setup, GROQ optimization, TypeGen, and schema management.",
+  "author": {
+    "name": "Sanity",
+    "email": "support@sanity.io",
+    "url": "https://www.sanity.io"
+  }
+}
