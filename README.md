@@ -20,6 +20,12 @@ Collection of resources to help AI agents build better with [Sanity](https://www
 
 ## Get started
 
+Choose your path based on how you want agents to work with Sanity:
+
+1. **MCP server** — Give your agent always up-to-date rules and full access to your Sanity projects. No local files to maintain. Works with Cursor, VS Code, Claude Code, and other MCP-compatible editors.
+2. **Claude Code plugin** — Adds interactive skills and slash commands on top of MCP for guided workflows.
+3. **Manual installation** — Copy rules locally for offline use. You'll need to update them yourself.
+
 ### Option 1: Install MCP server (recommended)
 
 Give agents direct access to Sanity projects and always up-to-date agent rules via the MCP server.
