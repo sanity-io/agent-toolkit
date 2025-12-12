@@ -4,27 +4,18 @@ globs: src/**/*.tsx, src/**/*.ts, sanity.cli.ts, App.tsx
 alwaysApply: false
 ---
 
-# Sanity App SDK Best Practices
+# Sanity App SDK
 
-## 1. What is the App SDK?
+Build custom React applications that interact with Sanity content in real-time.
 
-The Sanity App SDK is a toolkit for building **custom React applications** that interact with Sanity content. Unlike Sanity Studio, SDK apps can:
-- Work across **multiple projects and datasets**
-- Provide **complete UI freedom** (no structured interface)
-- Build **custom workflows** tailored to specific needs
-- Enable **real-time, multiplayer** content operations
+## Tech Stack
 
-### Key Differences from Studio
-| Feature | Sanity Studio | App SDK |
-|---------|---------------|---------|
-| Projects/Datasets | Single | Multiple |
-| UI | Structured | Custom |
-| Validation | Built-in | Bring your own |
-| Form building | Built-in | Bring your own |
+- **Framework:** React 19+, TypeScript
+- **Packages:** `@sanity/sdk`, `@sanity/sdk-react`
+- **Optional UI:** `@sanity/ui`, `styled-components`
+- **Runtime:** Node.js 20+
 
-## 2. Project Setup
-
-### Initialize a New App
+## Commands
 
 ```bash
 # Basic quickstart
@@ -32,9 +23,45 @@ npx sanity@latest init --template app-quickstart --organization <your-org-id> --
 
 # With Sanity UI components
 npx sanity@latest init --template app-sanity-ui --organization <your-org-id> --output-path . --typescript --skip-mcp
+
+# Start development server
+npm run dev
+
+# Deploy to Sanity
+npx sanity@latest deploy
+
+# Install Sanity UI
+npm install @sanity/ui styled-components
 ```
 
-### CLI Configuration (`sanity.cli.ts`)
+## Project Structure
+
+```
+my-app/
+├── sanity.cli.ts        # CLI config (org ID, entry point)
+├── src/
+│   ├── App.tsx          # Root component with SanityApp provider
+│   ├── App.css          # Global styles
+│   └── components/      # Your components
+├── package.json
+└── tsconfig.json
+```
+
+## Boundaries
+
+- ✅ **Always:** Wrap data-fetching components in `<Suspense>`, use `documentId` as React `key`, read/write directly to Content Lake (not local state)
+- ✅ **Always:** Use `useDocuments` for lists, `useDocumentProjection` for display, `useDocument` + `useEditDocument` for editing
+- ⚠️ **Ask first:** Before using `useQuery` with raw GROQ (prefer `useDocuments` + `useDocumentProjection`)
+- ⚠️ **Ask first:** Before adding multiple data-fetching hooks in a single component
+- 🚫 **Never:** Use `useState` for form values that should sync with Content Lake
+- 🚫 **Never:** Use array index as React `key` for document lists (breaks real-time updates)
+- 🚫 **Never:** Forget the `fallback` prop on `<SanityApp>` and `<Suspense>` boundaries
+
+---
+
+## Configuration
+
+### CLI Config (`sanity.cli.ts`)
 
 ```typescript
 import { defineCliConfig } from 'sanity/cli'
@@ -44,110 +71,121 @@ export default defineCliConfig({
     organizationId: 'your-org-id',
     entry: './src/App.tsx',
   },
-  deployment: {
-    appId: 'your-app-id', // Added after first deploy
-  },
 })
 ```
 
-### App Configuration (`src/App.tsx`)
+### App Root (`src/App.tsx`)
 
 ```typescript
 import { SanityApp, type SanityConfig } from '@sanity/sdk-react'
 
 export default function App() {
-  // Apps can connect to multiple projects/datasets
   const config: SanityConfig[] = [
     {
       projectId: 'your-project-id',
       dataset: 'production',
     },
-    // Add more projects as needed
   ]
 
   return (
     <SanityApp config={config} fallback={<div>Loading...</div>}>
-      {/* Your components here */}
+      <YourComponents />
     </SanityApp>
+  )
+}
+```
+
+### With Sanity UI
+
+```typescript
+import { SanityApp, type SanityConfig } from '@sanity/sdk-react'
+import { ThemeProvider } from '@sanity/ui'
+import { buildTheme } from '@sanity/ui/theme'
+
+const theme = buildTheme()
+
+export default function App() {
+  const config: SanityConfig[] = [
+    { projectId: 'your-project-id', dataset: 'production' },
+  ]
+
+  return (
+    <ThemeProvider theme={theme}>
+      <SanityApp config={config} fallback={<div>Loading...</div>}>
+        <YourComponents />
+      </SanityApp>
+    </ThemeProvider>
   )
 }
 ```
 
 ### Environment Variables
 
-Use the `SANITY_APP_` prefix for environment variables:
+Prefix with `SANITY_APP_` for automatic bundling:
 
 ```bash
 SANITY_APP_PROJECT_ID=abc123
 SANITY_APP_DATASET=production
 ```
 
-Access in code: `process.env.SANITY_APP_PROJECT_ID`
+Access: `process.env.SANITY_APP_PROJECT_ID`
 
-## 3. Document Handles
+---
 
-Document Handles are **lightweight references** to documents, containing only metadata needed to identify them.
+## Document Handles
+
+Lightweight references to documents. Fetch handles first, then load content as needed.
 
 ```typescript
 interface DocumentHandle {
   documentId: string
   documentType: string
-  projectId?: string  // Optional - for multi-project apps
-  dataset?: string    // Optional - for multi-dataset apps
+  projectId?: string
+  dataset?: string
 }
 ```
-
-### Why Use Document Handles?
-- **Performance**: Fetch handles first, then load content as needed
-- **Flexibility**: Pass to specialized hooks for specific data
-- **Stable Keys**: Use `documentId` as React `key` for lists
 
 ### Creating Handles
 
 ```typescript
-// Option 1: From useDocuments hook (preferred)
+// ✅ Best: From useDocuments hook
 const { data: handles } = useDocuments({ documentType: 'article' })
 
-// Option 2: Manual creation with helper (best for TypeGen)
+// ✅ Good: With helper (preserves literal types for TypeGen)
 import { createDocumentHandle } from '@sanity/sdk'
-
 const handle = createDocumentHandle({
   documentId: 'my-doc-id',
   documentType: 'article',
 })
 
-// Option 3: Manual with `as const` (for TypeGen)
+// ✅ Good: With as const (preserves literal types)
 const handle = {
   documentId: 'my-doc-id',
   documentType: 'article',
 } as const
 ```
 
-## 4. Data Fetching Patterns
+---
 
-### Core Philosophy: Prefer Handles Over Raw Queries
-
-```typescript
-// ❌ Avoid: Over-fetching with raw GROQ
-const { data } = useQuery(`*[_type == "article"]`)
-
-// ✅ Preferred: Fetch handles, then project content
-const { data: articles } = useDocuments({ documentType: 'article' })
-```
-
-### Hook Selection Guide
+## Hook Selection
 
 | Hook | Use Case | Returns |
 |------|----------|---------|
 | `useDocuments` | List of documents (infinite scroll) | Document handles |
-| `usePaginatedDocuments` | Paginated lists | Document handles |
+| `usePaginatedDocuments` | Paginated lists with page controls | Document handles |
 | `useDocument` | Single document, real-time editing | Full document or field |
 | `useDocumentProjection` | Specific fields, display only | Projected data |
-| `useQuery` | Complex GROQ queries | Raw query results |
+| `useQuery` | Complex GROQ queries (use sparingly) | Raw query results |
 
-### Fetching Document Lists
+---
+
+## Code Patterns
+
+### Fetching a Document List
 
 ```typescript
+// ✅ Good: Fetch handles, render items with Suspense
+import { Suspense } from 'react'
 import { useDocuments } from '@sanity/sdk-react'
 
 function ArticleList() {
@@ -168,7 +206,7 @@ function ArticleList() {
       </ul>
       {hasMore && (
         <button onClick={loadMore} disabled={isPending}>
-          {isPending ? 'Loading...' : 'Load More'}
+          Load More
         </button>
       )}
     </>
@@ -176,9 +214,18 @@ function ArticleList() {
 }
 ```
 
-### Projecting Content from Handles
+```typescript
+// ❌ Bad: Over-fetching with raw GROQ, no pagination
+function BadArticleList() {
+  const { data } = useQuery(`*[_type == "article"]`)
+  return data?.map((doc, i) => <li key={i}>{doc.title}</li>)
+}
+```
+
+### Projecting Content from a Handle
 
 ```typescript
+// ✅ Good: Project only needed fields
 import { useDocumentProjection, type DocumentHandle } from '@sanity/sdk-react'
 
 function ArticleItem(handle: DocumentHandle) {
@@ -202,52 +249,13 @@ function ArticleItem(handle: DocumentHandle) {
 }
 ```
 
-### Reading Single Documents (Real-time)
+### Real-time Editing
 
 ```typescript
-import { useDocument, type DocumentHandle } from '@sanity/sdk-react'
+// ✅ Good: Read and write directly to Content Lake
+import { useDocument, useEditDocument, type DocumentHandle } from '@sanity/sdk-react'
 
-function ArticleEditor(handle: DocumentHandle) {
-  // Full document
-  const { data: article } = useDocument(handle)
-
-  // Specific field path
-  const { data: title } = useDocument({
-    ...handle,
-    path: 'title',
-  })
-
-  return <div>{title}</div>
-}
-```
-
-## 5. Document Editing
-
-### Real-time Editing with `useEditDocument`
-
-**Always read from and write to Content Lake** - never use local state for form values.
-
-```typescript
-// ❌ Wrong: Local state with submit
-function BadTitleForm(handle: DocumentHandle) {
-  const [value, setValue] = useState('')
-  const editTitle = useEditDocument({ ...handle, path: 'title' })
-
-  function handleSubmit(e: FormEvent) {
-    e.preventDefault()
-    editTitle(value) // Only writes on submit - causes stale data!
-  }
-
-  return (
-    <form onSubmit={handleSubmit}>
-      <input value={value} onChange={(e) => setValue(e.target.value)} />
-      <button type="submit">Save</button>
-    </form>
-  )
-}
-
-// ✅ Correct: Read and write directly to Content Lake
-function GoodTitleInput(handle: DocumentHandle) {
+function TitleInput(handle: DocumentHandle) {
   const { data: title } = useDocument({ ...handle, path: 'title' })
   const editTitle = useEditDocument({ ...handle, path: 'title' })
 
@@ -261,29 +269,27 @@ function GoodTitleInput(handle: DocumentHandle) {
 }
 ```
 
-### Using Functional Updates
-
 ```typescript
-import { useEditDocument, type DocumentHandle } from '@sanity/sdk-react'
+// ❌ Bad: Local state with submit button - causes stale data
+function BadTitleForm(handle: DocumentHandle) {
+  const [value, setValue] = useState('')
+  const editTitle = useEditDocument({ ...handle, path: 'title' })
 
-function ArticleEditor(handle: DocumentHandle) {
-  const editArticle = useEditDocument(handle)
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault()
+    editTitle(value) // Only writes on submit!
+  }
 
-  const handleTitleChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      editArticle((prev) => ({
-        ...prev,
-        title: e.target.value,
-      }))
-    },
-    [editArticle]
+  return (
+    <form onSubmit={handleSubmit}>
+      <input value={value} onChange={(e) => setValue(e.target.value)} />
+      <button type="submit">Save</button>
+    </form>
   )
-
-  return <input onChange={handleTitleChange} />
 }
 ```
 
-### Document Actions (Publish, Delete, etc.)
+### Document Actions
 
 ```typescript
 import {
@@ -291,7 +297,6 @@ import {
   publishDocument,
   unpublishDocument,
   deleteDocument,
-  discardDraftDocument,
 } from '@sanity/sdk-react'
 
 function DocumentActions({ handle }: { handle: DocumentHandle }) {
@@ -299,48 +304,24 @@ function DocumentActions({ handle }: { handle: DocumentHandle }) {
 
   return (
     <div>
-      <button onClick={() => apply(publishDocument(handle))}>
-        Publish
-      </button>
-      <button onClick={() => apply(unpublishDocument(handle))}>
-        Unpublish
-      </button>
-      <button onClick={() => apply(deleteDocument(handle))}>
-        Delete
-      </button>
+      <button onClick={() => apply(publishDocument(handle))}>Publish</button>
+      <button onClick={() => apply(unpublishDocument(handle))}>Unpublish</button>
+      <button onClick={() => apply(deleteDocument(handle))}>Delete</button>
     </div>
   )
 }
 ```
 
-## 6. Suspense Patterns
+---
 
-The App SDK uses **React Suspense** for data fetching. Master these patterns:
+## Suspense Patterns
 
-### Wrap Every Data-Fetching Component
+The App SDK uses React Suspense. Every data-fetching component must be wrapped.
 
-```typescript
-// ✅ Correct: Suspense around the component using the hook
-function ParentComponent() {
-  return (
-    <Suspense fallback={<LoadingSkeleton />}>
-      <DataFetchingComponent />
-    </Suspense>
-  )
-}
-```
-
-### One Suspenseful Hook Per Component
+### One Hook Per Component
 
 ```typescript
-// ❌ Wrong: Multiple fetchers cause unnecessary re-renders
-function BadComponent() {
-  const { data: events } = useDocuments({ documentType: 'event' })
-  const { data: venues } = useDocuments({ documentType: 'venue' })
-  // Both will trigger Suspense together
-}
-
-// ✅ Correct: Separate into individual components
+// ✅ Good: Separate fetchers into separate components
 function EventsAndVenues() {
   return (
     <>
@@ -365,22 +346,27 @@ function VenuesList() {
 }
 ```
 
-### Prevent Layout Shift with Skeleton Fallbacks
+```typescript
+// ❌ Bad: Multiple fetchers in one component
+function BadComponent() {
+  const { data: events } = useDocuments({ documentType: 'event' })
+  const { data: venues } = useDocuments({ documentType: 'venue' })
+  // Both trigger Suspense together, causing unnecessary re-renders
+}
+```
+
+### Prevent Layout Shift
 
 ```typescript
+// ✅ Good: Fallback matches final component dimensions
 const BUTTON_TEXT = 'Open in Studio'
 
 export function OpenInStudio({ handle }: { handle: DocumentHandle }) {
   return (
-    <Suspense fallback={<OpenInStudioFallback />}>
+    <Suspense fallback={<Button text={BUTTON_TEXT} disabled />}>
       <OpenInStudioButton handle={handle} />
     </Suspense>
   )
-}
-
-// Fallback matches final component dimensions
-function OpenInStudioFallback() {
-  return <Button text={BUTTON_TEXT} disabled />
 }
 
 function OpenInStudioButton({ handle }: { handle: DocumentHandle }) {
@@ -389,125 +375,38 @@ function OpenInStudioButton({ handle }: { handle: DocumentHandle }) {
 }
 ```
 
-## 7. Event Handling
+---
 
-### Subscribe to Document Events
+## Event Handling
 
 ```typescript
 import { useDocumentEvent, DocumentEvent } from '@sanity/sdk-react'
 
 function DocumentWatcher(handle: DocumentHandle) {
-  const [notifications, setNotifications] = useState<string[]>([])
-
   useDocumentEvent({
     ...handle,
     onEvent: (event) => {
       switch (event.type) {
         case DocumentEvent.DocumentEditedEvent:
-          setNotifications((prev) => [`Edited: ${event.documentId}`, ...prev])
+          console.log('Edited:', event.documentId)
           break
         case DocumentEvent.DocumentPublishedEvent:
-          setNotifications((prev) => [`Published: ${event.documentId}`, ...prev])
+          console.log('Published:', event.documentId)
           break
         case DocumentEvent.DocumentDeletedEvent:
-          setNotifications((prev) => [`Deleted: ${event.documentId}`, ...prev])
+          console.log('Deleted:', event.documentId)
           break
       }
     },
   })
 
-  return (
-    <ul>
-      {notifications.map((msg, i) => (
-        <li key={i}>{msg}</li>
-      ))}
-    </ul>
-  )
+  return null
 }
 ```
 
-## 8. Using Sanity UI
+---
 
-### Installation
-
-```bash
-npm install @sanity/ui styled-components
-```
-
-### Setup with App SDK
-
-```typescript
-import { SanityApp, type SanityConfig } from '@sanity/sdk-react'
-import { ThemeProvider } from '@sanity/ui'
-import { buildTheme } from '@sanity/ui/theme'
-
-const theme = buildTheme()
-
-export default function App() {
-  const config: SanityConfig[] = [
-    { projectId: 'your-project-id', dataset: 'production' },
-  ]
-
-  return (
-    <ThemeProvider theme={theme}>
-      <SanityApp config={config} fallback={<div>Loading...</div>}>
-        <YourComponents />
-      </SanityApp>
-    </ThemeProvider>
-  )
-}
-```
-
-### Optional: Faster Styled Components
-
-```bash
-# React 18
-npm add --save-exact styled-components@npm:@sanity/styled-components
-
-# React 19
-npm add --save-exact styled-components@npm:@sanity/css-in-js
-```
-
-## 9. TypeScript & TypeGen
-
-Use `createDocumentHandle` or `as const` for proper type inference with Sanity TypeGen:
-
-```typescript
-import { createDocumentHandle } from '@sanity/sdk'
-
-// Option 1: Helper function (recommended)
-const handle = createDocumentHandle({
-  documentId: 'my-doc',
-  documentType: 'article', // TypeGen will infer this literal type
-})
-
-// Option 2: as const
-const handle = {
-  documentId: 'my-doc',
-  documentType: 'article',
-} as const
-```
-
-## 10. Development & Deployment
-
-### Development
-
-```bash
-npm run dev
-# Opens at: https://sanity.io/@your-org-id?dev=http://localhost:3333
-```
-
-> **Note:** Safari may have issues during development due to mixed content handling. Use Chrome or Firefox for development.
-
-### Deployment
-
-```bash
-npx sanity@latest deploy
-```
-
-## 11. Common Patterns
-
-### Multi-Project/Dataset Apps
+## Multi-Project Apps
 
 ```typescript
 const config: SanityConfig[] = [
@@ -515,7 +414,7 @@ const config: SanityConfig[] = [
   { projectId: 'project-2', dataset: 'staging' },
 ]
 
-// Document handles include project/dataset info
+// Handles include project/dataset info
 const handle: DocumentHandle = {
   documentId: 'doc-123',
   documentType: 'article',
@@ -524,29 +423,9 @@ const handle: DocumentHandle = {
 }
 ```
 
-### Optimistic Updates
+---
 
-The SDK handles optimistic updates automatically when using `useDocument` + `useEditDocument`:
-
-```typescript
-function OptimisticEditor(handle: DocumentHandle) {
-  // `data` reflects local optimistic state immediately
-  const { data: title } = useDocument({ ...handle, path: 'title' })
-  const editTitle = useEditDocument({ ...handle, path: 'title' })
-
-  // Changes appear instantly, sync to Content Lake in background
-  return (
-    <input
-      value={title ?? ''}
-      onChange={(e) => editTitle(e.currentTarget.value)}
-    />
-  )
-}
-```
-
-### Ref-Based Lazy Loading
-
-Use refs to defer content loading until elements are visible:
+## Lazy Loading with Refs
 
 ```typescript
 function LazyContent(handle: DocumentHandle) {
@@ -554,7 +433,7 @@ function LazyContent(handle: DocumentHandle) {
 
   const { data } = useDocumentProjection({
     ...handle,
-    ref, // Content only loads when element is in viewport
+    ref, // Only loads when element enters viewport
     projection: '{ title, body }',
   })
 
@@ -562,18 +441,23 @@ function LazyContent(handle: DocumentHandle) {
 }
 ```
 
-## 12. Requirements & Limitations
+---
 
-### Requirements
-- React v19 or higher
-- Node.js v20 or higher
+## What's NOT Included
 
-### What's NOT Included
+The App SDK provides hooks and data stores. You bring:
+
 - UI components (use Sanity UI or your own)
 - Router
 - Form validation
 - Schema validation
 
-### Limitations
-- Safari development issues (use Chrome/Firefox during development)
-- Studio mode only works with project-level endpoints
+---
+
+## Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| Safari dev issues | Use Chrome or Firefox during development |
+| Port 3333 in use | `npm run dev -- --port 3334` |
+| Auth errors | `npx sanity@latest logout && npx sanity@latest login` |
