@@ -1,0 +1,518 @@
+---
+description: Guide for building React interfaces with @sanity/ui, Sanity's official design system. Focuses on design system fundamentals, component selection, and Sanity-specific patterns.
+globs: **/*.tsx, **/*.ts
+alwaysApply: false
+---
+
+# Sanity UI Component Library & Design System
+
+Guide for building React interfaces with Sanity UI (@sanity/ui).
+
+**For detailed component API reference, see:** https://www.sanity.io/ui
+
+## Quick Start
+
+Install Sanity UI:
+
+```bash
+npm install @sanity/ui styled-components
+```
+
+### ThemeProvider Setup
+
+**Important:** ThemeProvider is only needed for standalone apps, NOT for Studio plugins/tools.
+
+#### Building Studio Plugins or Tools? (No Setup Needed)
+
+Studio automatically provides ThemeProvider. Just import and use components directly:
+
+```tsx
+import {Stack, Card, Text, Button} from '@sanity/ui'
+
+// No ThemeProvider needed - Studio provides it
+export function MyStudioTool() {
+  return (
+    <Stack space={4} padding={4}>
+      <Card padding={4} radius={2} shadow={1}>
+        <Text>Content</Text>
+      </Card>
+    </Stack>
+  )
+}
+```
+
+#### Building Standalone Apps? (ThemeProvider Required)
+
+For apps using App SDK (`@sanity/sdk-react`) without full Studio, wrap with ThemeProvider:
+
+```tsx
+import {ThemeProvider, studioTheme} from '@sanity/ui'
+import {SanityApp} from '@sanity/sdk-react'
+
+function App() {
+  return (
+    <ThemeProvider theme={studioTheme}>
+      <SanityApp config={sanityConfigs}>
+        {/* Your app UI */}
+      </SanityApp>
+    </ThemeProvider>
+  )
+}
+```
+
+#### Embedded Studio (Optional Outer ThemeProvider)
+
+When embedding Studio in a larger app, Studio provides its own ThemeProvider internally. You may optionally add an outer ThemeProvider for UI outside the Studio boundary:
+
+```tsx
+import {ThemeProvider, studioTheme} from '@sanity/ui'
+import {Studio} from 'sanity'
+
+function App() {
+  return (
+    <ThemeProvider theme={studioTheme}>  {/* Optional: for app UI outside Studio */}
+      <CustomHeader />  {/* Uses outer ThemeProvider */}
+      <Studio config={config} />  {/* Has its own ThemeProvider internally */}
+    </ThemeProvider>
+  )
+}
+```
+
+## Design System Fundamentals
+
+### Spacing Scale (0-7)
+
+Uses 4px base unit:
+
+| Value | Pixels | Usage |
+|-------|--------|-------|
+| 0 | 0px | No spacing |
+| 1 | 4px | Extra tight |
+| 2 | 8px | Tight |
+| 3 | 12px | Compact |
+| 4 | 16px | Default/comfortable |
+| 5 | 24px | Spacious |
+| 6 | 48px | Very spacious |
+| 7 | 96px | Extra spacious |
+
+```tsx
+<Box padding={4}>  {/* 16px padding */}
+<Stack space={3}>  {/* 12px between items */}
+<Grid gap={2}>     {/* 8px grid gap */}
+```
+
+### Semantic Tones
+
+Use tones to communicate state and intent:
+
+- `default` - Standard neutral appearance
+- `primary` - Primary brand color
+- `positive` - Success states (green)
+- `caution` - Warning states (yellow)
+- `critical` - Error/danger states (red)
+- `transparent` - Transparent background
+- `inherit` - Inherit from parent
+
+```tsx
+<Button tone="positive" text="Save" />
+<Button tone="critical" text="Delete" />
+<Card tone="caution"><Text>Warning</Text></Card>
+```
+
+### Responsive Props
+
+Many props accept responsive arrays (mobile-first):
+
+```tsx
+<Box
+  padding={[3, 4, 5]}           // Mobile: 3, Tablet: 4, Desktop: 5
+  display={['block', 'flex']}   // Mobile: block, Tablet+: flex
+/>
+
+<Grid columns={[1, 2, 3]} gap={[2, 3, 4]}>
+  {/* 1 column mobile, 2 tablet, 3+ desktop */}
+</Grid>
+```
+
+### Other Design Tokens
+
+**Font Sizes:**
+- Text: 0-4 (0=smallest, 4=largest)
+- Heading: 0-6 (0=smallest, 6=largest)
+
+**Border Radius (0-6):** 0px, 1px, 2px, 4px, 8px, 16px, 32px
+
+**Shadows (0-5):** None, subtle, light, medium, high, maximum elevation
+
+## Component Quick Reference
+
+### Layout Components
+
+**When you need layout:**
+- `Box` - Base layout with margin, padding, flex/grid props
+- `Stack` - Vertical layout with spacing
+- `Inline` - Horizontal inline layout with wrapping
+- `Flex` - Flexbox layout
+- `Grid` - CSS Grid layout
+- `Container` - Max-width centered container
+
+```tsx
+<Stack space={4}>
+  <Box padding={3}>Item 1</Box>
+  <Box padding={3}>Item 2</Box>
+</Stack>
+
+<Flex align="center" justify="space-between" gap={3}>
+  <Button text="Left" />
+  <Button text="Right" />
+</Flex>
+
+<Grid columns={[1, 2, 3]} gap={4}>
+  <Card>Cell 1</Card>
+  <Card>Cell 2</Card>
+</Grid>
+```
+
+### UI Components
+
+**When you need:**
+- **Container/card** → `Card` (with padding, radius, shadow, tone)
+- **Button** → `Button` (modes: default, ghost, bleed)
+- **Text** → `Text`, `Heading`, `Label`
+- **Form inputs** → `TextInput`, `TextArea`, `Select`, `Checkbox`, `Radio`, `Switch`
+- **User avatar** → `Avatar`
+- **Badge/pill** → `Badge`
+- **Code display** → `Code`, `Kbd`
+- **Loading indicator** → `Spinner`
+
+**Interactive/overlay components:**
+- `Dialog` - Modal dialogs
+- `Popover` - Dropdown overlays
+- `Menu` / `MenuButton` / `MenuItem` - Dropdown menus
+- `Tooltip` - Hover tooltips
+
+**Notifications:**
+- `useToast()` hook - Toast notifications
+
+```tsx
+// Basic components
+<Card padding={4} radius={2} shadow={1} tone="primary">
+  <Text size={2} weight="semibold">Card content</Text>
+</Card>
+
+<Button text="Save" icon={CheckIcon} tone="primary" onClick={handleSave} />
+
+// Form inputs
+<Stack space={3}>
+  <Label>Email</Label>
+  <TextInput type="email" value={email} onChange={e => setEmail(e.currentTarget.value)} />
+</Stack>
+
+// Toast notifications
+const toast = useToast()
+toast.push({
+  status: 'success',
+  title: 'Saved',
+  description: 'Changes saved successfully'
+})
+```
+
+## Sanity-Specific Patterns
+
+### Document Panel Layout
+
+Standard document editing layout with fixed header/footer and scrollable content:
+
+```tsx
+function DocumentPanel({header, banners, content, inspector, footer}) {
+  return (
+    <Flex direction="column" height="fill">
+      {/* Fixed header */}
+      {header}
+
+      {/* Scrollable content area */}
+      <Flex flex={1} overflow="auto">
+        <Box flex={1}>
+          {/* Contextual banners */}
+          {banners && (
+            <Stack space={2} paddingX={4} paddingY={3}>
+              {banners}
+            </Stack>
+          )}
+
+          {/* Main content */}
+          <Box padding={4}>{content}</Box>
+        </Box>
+
+        {/* Side inspector (responsive - hides on mobile) */}
+        {inspector && (
+          <Box flex={1} borderLeft display={['none', 'none', 'block']}>
+            {inspector}
+          </Box>
+        )}
+      </Flex>
+
+      {/* Fixed footer */}
+      {footer}
+    </Flex>
+  )
+}
+```
+
+### Form Field Pattern
+
+Standard field wrapper with label, description, and validation:
+
+```tsx
+function FormField({title, description, validation, children}) {
+  return (
+    <Stack space={2}>
+      {title && <Label size={1} weight="semibold">{title}</Label>}
+      {description && <Text size={1} muted>{description}</Text>}
+
+      {validation?.length > 0 && (
+        <Stack space={2}>
+          {validation.map((item, i) => (
+            <Alert key={i} status={item.level} title={item.message} />
+          ))}
+        </Stack>
+      )}
+
+      {children}
+    </Stack>
+  )
+}
+```
+
+### Custom Input Component
+
+Building custom inputs for Sanity schemas:
+
+```tsx
+import {Stack, TextInput} from '@sanity/ui'
+import {set, unset} from 'sanity'
+
+export function CustomStringInput(props) {
+  const {elementProps, onChange, value = ''} = props
+
+  return (
+    <Stack space={2}>
+      <TextInput
+        {...elementProps}
+        value={value}
+        onChange={(event) => {
+          const nextValue = event.currentTarget.value
+          onChange(nextValue ? set(nextValue) : unset())
+        }}
+      />
+    </Stack>
+  )
+}
+```
+
+### Banner Pattern
+
+Contextual messages at top of content areas:
+
+```tsx
+function Banner({tone = 'caution', message, action}) {
+  return (
+    <Box padding={1}>
+      <Card radius={3} paddingX={2} paddingY={2} tone={tone}>
+        <Flex align="center" gap={3} paddingX={2}>
+          <Text size={0}><WarningOutlineIcon /></Text>
+          <Flex align="center" flex={1} paddingY={2}>
+            <Text size={1}>{message}</Text>
+          </Flex>
+          {action && <Button {...action} mode="ghost" />}
+        </Flex>
+      </Card>
+    </Box>
+  )
+}
+```
+
+### Loading States
+
+Always provide feedback during async operations:
+
+```tsx
+function LoadingPane({message = 'Loading...'}) {
+  return (
+    <Flex align="center" direction="column" height="fill" justify="center">
+      <Stack space={3} align="center">
+        <Spinner />
+        <Text size={1} muted>{message}</Text>
+      </Stack>
+    </Flex>
+  )
+}
+```
+
+### Empty States
+
+Standard empty state pattern:
+
+```tsx
+function EmptyState({heading, description, onCreate}) {
+  return (
+    <Flex align="center" direction="column" height="fill" justify="center">
+      <Container width={1}>
+        <Box paddingX={4} paddingY={5}>
+          <Stack space={4} align="center">
+            <Text size={1} weight="semibold" align="center">{heading}</Text>
+            <Text size={1} muted align="center">{description}</Text>
+            {onCreate && (
+              <Button icon={AddIcon} text="Create new" onClick={onCreate} tone="primary" />
+            )}
+          </Stack>
+        </Box>
+      </Container>
+    </Flex>
+  )
+}
+```
+
+### Responsive Layout
+
+Collapse based on available space using `useElementRect`:
+
+```tsx
+import {useElementRect} from '@sanity/ui'
+
+function ResponsiveLayout({minWidth = 768}) {
+  const [rootElement, setRootElement] = useState(null)
+  const rootRect = useElementRect(rootElement)
+  const isCompact = (rootRect?.width || 0) < minWidth
+
+  return (
+    <div ref={setRootElement}>
+      {isCompact ? <CompactView /> : <FullView />}
+    </div>
+  )
+}
+```
+
+### Portal Management
+
+For dialogs, popovers, and tooltips:
+
+```tsx
+import {PortalProvider} from '@sanity/ui'
+
+function PluginRoot() {
+  const [portalElement, setPortalElement] = useState(null)
+
+  return (
+    <PortalProvider element={portalElement}>
+      {/* Dialogs, tooltips, popovers render here */}
+      <YourContent />
+      <div ref={setPortalElement} />
+    </PortalProvider>
+  )
+}
+```
+
+## Useful Hooks
+
+- `useTheme()` - Access theme tokens programmatically
+- `usePrefersDark()` - Detect user's dark mode preference
+- `useMediaIndex()` - Get current responsive breakpoint index (0-4)
+- `useToast()` - Toast notification system
+- `useElementRect()` - Track element dimensions with resize observer
+
+```tsx
+import {useTheme, usePrefersDark, useMediaIndex} from '@sanity/ui'
+
+function MyComponent() {
+  const theme = useTheme()
+  const prefersDark = usePrefersDark()
+  const mediaIndex = useMediaIndex()
+
+  const spacing = theme.space[4] // 16px
+  const isMobile = mediaIndex === 0
+
+  return (
+    <Card scheme={prefersDark ? 'dark' : 'light'}>
+      {isMobile ? 'Mobile' : 'Desktop'}
+    </Card>
+  )
+}
+```
+
+## Building Custom Themes
+
+Use `buildTheme()` to customize the design system:
+
+```tsx
+import {buildTheme} from '@sanity/ui/theme'
+import {studioTheme} from '@sanity/ui'
+
+const customTheme = buildTheme({
+  base: studioTheme, // Extend existing theme
+  fonts: {
+    text: {
+      family: 'Inter, sans-serif',
+    }
+  },
+  space: [0, 4, 8, 12, 16, 24, 48, 96], // Custom spacing scale
+  radius: [0, 1, 2, 4, 8, 16, 32],      // Custom radius scale
+})
+```
+
+## Best Practices
+
+### 1. Use Design Tokens
+
+```tsx
+// Good: Using spacing scale
+<Stack space={4}>
+  <Box padding={3}>Content</Box>
+</Stack>
+
+// Avoid: Custom pixel values
+<div style={{padding: '14px'}}>Content</div>
+```
+
+### 2. Semantic Tones
+
+```tsx
+// Good: Semantic usage
+<Button tone="positive" text="Save" />
+<Button tone="critical" text="Delete" />
+
+// Avoid: Mismatched semantics
+<Button tone="critical" text="Save" /> // Red save button
+```
+
+### 3. Responsive Design
+
+```tsx
+// Good: Mobile-first responsive
+<Grid columns={[1, 2, 3]} gap={[2, 3, 4]}>
+  {/* Responsive grid */}
+</Grid>
+```
+
+### 4. Portal for Overlays
+
+Always wrap dialogs/popovers in PortalProvider when building plugins.
+
+### 5. Loading States
+
+Always provide feedback during async operations - never leave users wondering if something is happening.
+
+## Common Pitfalls
+
+1. **Don't add ThemeProvider in Studio plugins** - Studio already provides it
+2. **Don't mix spacing systems** - Always use @sanity/ui's scale
+3. **Don't use custom colors** - Use semantic tones instead
+4. **Don't forget portal providers** - Required for dialogs/popovers in plugins
+5. **Don't skip loading states** - Always provide feedback
+6. **Don't ignore responsive breakpoints** - Test on multiple screen sizes
+
+## Additional Resources
+
+- **Component API reference:** https://www.sanity.io/ui
+- **Source code:** https://github.com/sanity-io/ui
+- **Storybook:** Component examples and interactive demos

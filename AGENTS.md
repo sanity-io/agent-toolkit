@@ -49,6 +49,7 @@ If the Sanity MCP server (`https://mcp.sanity.io`) is available, use `list_sanit
 | **Shopify/Hydrogen** | `shopify`, `hydrogen`, `e-commerce`, `storefront`, `sanity connect` | `rules/sanity-hydrogen.mdc` |
 | **GROQ** | `groq`, `query`, `defineQuery`, `projection`, `filter`, `order` | `rules/sanity-groq.mdc` |
 | **TypeGen** | `typegen`, `typescript`, `types`, `infer`, `satisfies`, `type generation` | `rules/sanity-typegen.mdc` |
+| **Sanity UI** | `ui`, `component`, `theme`, `design system`, `studio plugin`, `custom tool`, `@sanity/ui` | `rules/sanity-ui.mdc` |
 
 ### Using the Knowledge Router
 
