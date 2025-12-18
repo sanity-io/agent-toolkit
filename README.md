@@ -45,7 +45,8 @@ Uses your logged-in CLI user for authentication — no manual tokens or OAuth ne
 <details>
 <summary><strong>Cursor</strong></summary>
 
-<a href="cursor://anysphere.cursor-deeplink/mcp/install?name=Sanity&config=eyJ1cmwiOiJodHRwczovL21jcC5zYW5pdHkuaW8iLCJ0eXBlIjoiaHR0cCJ9Cg==">Add to Cursor →</a>
+One-click install:<br>
+[![Install MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en-US/install-mcp?name=Sanity&config=eyJ0eXBlIjoiaHR0cCIsInVybCI6Imh0dHBzOi8vbWNwLnNhbml0eS5pbyJ9)
 
 Or manually add to `.cursor/mcp.json`:
 ```json
