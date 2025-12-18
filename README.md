@@ -5,7 +5,7 @@
   <h1 align="center">Sanity Agent Toolkit</h1>
 </p>
 
-Collection of resources to help AI agents build better with [Sanity](https://www.sanity.io). Supports Cursor, Claude Code, VS Code, and any other editor/agent compatible with MCP or `.mdc` rules.
+Collection of resources to help AI agents build better with [Sanity](https://www.sanity.io). Supports Cursor, Claude Code, VS Code, Lovable, v0, and any other editor/agent compatible with MCP or `.mdc` rules.
 
 ---
 
@@ -22,7 +22,7 @@ Collection of resources to help AI agents build better with [Sanity](https://www
 
 Choose your path based on how you want agents to work with Sanity:
 
-1. **MCP server** — Give your agent always up-to-date rules and full access to your Sanity projects. No local files to maintain. Works with Cursor, VS Code, Claude Code, and other MCP-compatible editors.
+1. **MCP server** — Give your agent always up-to-date rules and full access to your Sanity projects. No local files to maintain. Works with Cursor, VS Code, Claude Code, Lovable, v0, and other MCP-compatible clients.
 2. **Claude Code plugin** — Adds interactive skills and slash commands on top of MCP for guided workflows.
 3. **Manual installation** — Copy rules locally for offline use. You'll need to update them yourself.
 
@@ -30,7 +30,7 @@ Choose your path based on how you want agents to work with Sanity:
 
 Give agents direct access to Sanity projects and always up-to-date agent rules via the MCP server.
 
-#### Configure with Sanity CLI
+#### Quick install via Sanity CLI
 
 Run in terminal to detect and configure MCP for Cursor, Claude Code and VS Code automatically:
 
@@ -38,13 +38,17 @@ Run in terminal to detect and configure MCP for Cursor, Claude Code and VS Code 
 npx sanity@latest mcp configure
 ```
 
-Uses your logged-in CLI user for authentication — no API tokens or OAuth needed.
+Uses your logged-in CLI user for authentication — no manual tokens or OAuth needed.
 
-#### Cursor
+#### Client-specific instructions
 
-[One-click install →](cursor://anysphere.cursor-deeplink/mcp/install?name=Sanity&config=eyJ1cmwiOiJodHRwczovL21jcC5zYW5pdHkuaW8iLCJ0eXBlIjoiaHR0cCJ9Cg==)
+<details>
+<summary><strong>Cursor</strong></summary>
 
-Or add to `.cursor/mcp.json`:
+One-click install:<br>
+[![Install MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en-US/install-mcp?name=Sanity&config=eyJ0eXBlIjoiaHR0cCIsInVybCI6Imh0dHBzOi8vbWNwLnNhbml0eS5pbyJ9)
+
+Or manually add to `.cursor/mcp.json`:
 ```json
 {
   "mcpServers": {
@@ -55,16 +59,21 @@ Or add to `.cursor/mcp.json`:
   }
 }
 ```
+</details>
 
-#### Claude Code
+<details>
+<summary><strong>Claude Code</strong></summary>
 
 Run in terminal and authenticate with OAuth on next launch:
 
 ```bash
 claude mcp add Sanity -t http https://mcp.sanity.io --scope user
 ```
+</details>
 
-#### VS Code
+<details>
+<summary><strong>VS Code</strong></summary>
+
 Command Palette → `MCP: Open User Configuration` → add:
 ```json
 {
@@ -76,8 +85,41 @@ Command Palette → `MCP: Open User Configuration` → add:
   }
 }
 ```
+</details>
 
-See the [Sanity MCP docs](https://www.sanity.io/docs/compute-and-ai/mcp-server) for more options and troubleshooting.
+<details>
+<summary><strong>Lovable</strong></summary>
+
+**Settings** → **Connectors** → **Personal connectors** → **New MCP server** → Enter `Sanity` as name and `https://mcp.sanity.io` as URL → **Add & authorize**.
+</details>
+
+<details>
+<summary><strong>v0</strong></summary>
+
+Click **Prompt Tools** → **MCPs** → **Browse MCPs** → Select **Sanity** → **Authorize** → Authenticate with OAuth.
+</details>
+
+<details>
+<summary><strong>Other clients</strong></summary>
+
+For any MCP-compatible client, add `https://mcp.sanity.io` as the server URL.
+
+If your client doesn't support remote MCP servers, use a proxy like `mcp-remote`:
+```json
+{
+  "mcpServers": {
+    "Sanity": {
+      "command": "npx",
+      "args": ["mcp-remote", "https://mcp.sanity.io", "--transport", "http-only"]
+    }
+  }
+}
+```
+</details>
+
+<br />
+
+See the [Sanity MCP docs](https://www.sanity.io/docs/compute-and-ai/mcp-server) for authorization options and troubleshooting.
 
 ### Option 2: Install Claude Code plugin
 
