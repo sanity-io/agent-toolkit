@@ -214,6 +214,7 @@ These files provide passive knowledge to the AI, ensuring generated code follows
 - **`sanity-typegen.mdc`**: TypeScript type generation from schema.
 - **`sanity-project-structure.mdc`**: File organization for Studio and monorepos.
 - **`sanity-get-started.mdc`**: Interactive 3-phase onboarding guide.
+- **`sanity-app-sdk.mdc`**: Building custom apps with the Sanity App SDK, React hooks, and real-time patterns.
 </details>
 
 <details>
