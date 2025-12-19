@@ -189,6 +189,7 @@ Skills guide the AI through multi-step workflows in your codebase.
 | **Schema Manager** | Handles the full lifecycle: scaffolding, safe deprecation, and migrations. | "Deprecate the 'body' field" |
 | **GROQ Assistant** | Writes optimized queries using `defineQuery` and proper projections. | "Write a query for recent posts" |
 | **TypeGen Fixer** | Diagnoses and fixes TypeScript generation issues. | "Why are my types missing?" |
+| **Sanity UI Builder** | Guide for building React UIs with Sanity's design system and component library. | "Build a custom Studio tool UI" |
 | **Install Rules** | Copies context rules to your project for local agent guidance. | "Install Sanity rules locally" |
 
 ### Getting started flow
@@ -214,6 +215,7 @@ These files provide passive knowledge to the AI, ensuring generated code follows
 - **`sanity-typegen.mdc`**: TypeScript type generation from schema.
 - **`sanity-project-structure.mdc`**: File organization for Studio and monorepos.
 - **`sanity-get-started.mdc`**: Interactive 3-phase onboarding guide.
+- **`sanity-ui.mdc`**: Complete component reference for building with @sanity/ui design system.
 </details>
 
 <details>
