@@ -17,16 +17,14 @@ Version facts must come from a live source at the time the plan is generated. Th
 
 ## 1. Why this is non-negotiable
 
-A model's training data contains a snapshot of the npm ecosystem from some point in the past. Sanity Studio ships roughly weekly. Any version number recalled rather than retrieved will eventually be wrong, and it will be wrong in the most damaging way: stated confidently, in a document someone refactors against.
+R1 in `SKILL.md` states the rule. This is why it is absolute rather than a preference: a model's training data holds a snapshot of npm from some point in the past, and Sanity Studio ships roughly weekly. A version recalled rather than retrieved will eventually be wrong, and wrong in the most damaging way, which is stated confidently in a document someone refactors against.
 
-Concrete failure modes this prevents:
+The four failures this prevents:
 
 - Recommending a "latest" that is several majors behind, or ahead of what exists
 - Missing that a shared package published a new major since training
 - Missing that a plugin's patch release quietly bumped a major dependency, so the safe pin is an earlier patch
 - Telling someone a package's peer range accepts their target when it does not
-
-Every version in the report should be traceable to the lockfile or to a query run during this session.
 
 ## 2. Current versions from the registry
 
@@ -132,6 +130,20 @@ npm view sanity time --json     # publish dates per version
 - **The one-line fallback**, and only one: the previous minor, or `stable`. Give the version and what differs, in a sentence. Do not build out a parallel plan for it.
 
 Frame it as recommendation plus disclosure: "Target 6.12.0 (`latest`, published two days ago). If your change process needs more soak time, 6.11.0 has the same dependency shape." That is a decision the reader can act on, with the information to overrule it.
+
+### When `latest` published in the last few days
+
+**A target that is hours or days old still gets recommended, but the soak-time question stops being an aside and becomes a question in its own right.**
+
+`latest` is `latest` the day it ships, and the argument for it does not weaken: plugin releases track current core, so an older core with current plugins is usually the worse tree. What *is* different is that nobody has run this release in production yet, so there is no field evidence either way, and a reader planning a multi-week enterprise migration may reasonably want a week of other people's bug reports first.
+
+When the target published within roughly 72 hours:
+
+- Say so plainly in the header, with the date, not just "recently".
+- Name the previous minor, and state what actually differs between them, read from both manifests rather than assumed. Usually it is one or two shared-package ranges, and that is a one-line answer the reader can weigh.
+- **Put the choice in the report's questions section**, not only in the header. It is a change-process decision that depends on the team's release appetite, which is exactly the kind of thing a planner cannot determine from code.
+
+What not to do: recommend the older release on its own initiative because the newer one feels untested. That is the planner substituting its own risk tolerance for the reader's, and `stable` is not a safer synonym for `latest` either. Recommend, disclose, and let them decide.
 
 ### Dependency majors inside a minor release
 

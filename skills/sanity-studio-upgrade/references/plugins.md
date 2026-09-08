@@ -185,10 +185,16 @@ So the check is three questions, not one:
 2. **What is its declared type?** `never` means removed. Treat it as absent.
 3. **Does it carry `@deprecated`?** The tag text usually names the replacement, which is the fastest route to the correct snippet.
 
+This is the one check in the skill that writes files, so **unpack into a temporary directory and clean it up.** Never run `npm pack` or `tar` in the repository: it drops a tarball and an extracted `package/` into the project, which contradicts the read-and-report rule and leaves the reader with untracked files to explain.
+
 ```sh
-npm pack <pkg>@<version> && tar xzf <pkg>-<version>.tgz
-grep -B4 "declare const <Name>" package/dist/index.d.ts   # type plus any @deprecated block
+d=$(mktemp -d)
+npm pack --silent --pack-destination "$d" <pkg>@<version> >/dev/null && tar xzf "$d"/*.tgz -C "$d"
+grep -B4 "declare const <Name>" "$d"/package/dist/index.d.ts   # type plus any @deprecated block
+rm -rf "$d"
 ```
+
+If unpacking is not possible in the environment, the registry manifest still answers most of the question on its own (`npm view <pkg>@<version> exports --json`), and the README covers the rest. Say which of the two you used.
 
 The failure this prevents is specific and expensive: a symbol that resolves, types as `never`, is silently `undefined` at runtime, and gets written into the report's "already satisfied" section as needing no edit. That moves a silent failure into the one place the reader has been told not to look.
 

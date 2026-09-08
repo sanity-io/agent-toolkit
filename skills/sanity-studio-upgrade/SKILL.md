@@ -22,13 +22,37 @@ The same applies to API names. An export, an import subpath, or a function signa
 
 **2. Read and report. Never modify.**
 
-Inspect files, run read-only shell commands, query registries. Do not edit `package.json`, config files, or source. Do not run installs. The reader decides what to change; a planner that edits code will be turned off. If the user explicitly asks you to perform the upgrade afterward, that is a separate task they have consented to.
+Inspect files, run read-only shell commands, query registries. Do not edit `package.json`, config files, or source. The reader decides what to change; a planner that edits code will be turned off. If the user explicitly asks you to perform the upgrade afterward, that is a separate task they have consented to.
+
+**Where the line actually falls**, because a vague version of this rule makes an agent hesitate over commands that are fine:
+
+- **Never**: writing to any file in the repository, installing into it, or mutating a lockfile. `pnpm install`, `npm install`, `npm ci` and `npx` without `--no-install` are all out.
+- **Fine**: reading files, and network reads such as `npm view`, a changelog fetch, or `npm pack` **into a temporary directory outside the repository** that you then delete.
+- **Recommended to the reader, not run by you**: `pnpm install --lockfile-only` is how a dependency prediction gets settled. It belongs in the report as a command for them to run, with what to expect from it. Do not run it yourself, because it rewrites their lockfile.
+
+The one place this skill writes anything is unpacking a tarball to inspect type declarations, and section 6 of `plugins.md` shows how to keep that outside the project.
 
 **3. Separate what you verified from what you inferred.**
 
 Every finding lands in one of three buckets: confirmed applicable (you found the condition in the repo), needs a human answer (you cannot determine it from code), or not applicable (omit it entirely). Never pad the report with items you could not check. An honest short report beats a comprehensive-looking one.
 
 One consequence is easy to miss and worth stating outright: **a read-only planner has no dependency resolver, so it cannot know what a tree will contain after a change.** Predictions about deduplication belong in the report as expectations with the verification command attached, never as findings. See `package-coupling.md`.
+
+## The verification rules, in one place
+
+These are referred to by number throughout the reference files, so they are stated once here rather than restated in each. Everything above is R1 to R4; the rest are the specific ways those go wrong.
+
+| | Rule | Where it bites |
+| --- | --- | --- |
+| **R1** | Never state a version from memory. Take current state from the lockfile, targets from a live registry query. | `version-lookup.md` §1 |
+| **R2** | Read and report. Nothing in the repository changes, nothing is installed, no lockfile is mutated. | Above, and `plugins.md` §6 |
+| **R3** | Separate verified from inferred. Never assert what a dependency tree will contain after a change; a planner has no resolver. | `package-coupling.md` §6, `plugins.md` §5 |
+| **R4** | Confirm every recommended version was actually published before it goes in the report. | `version-lookup.md` §3 |
+| **R5** | Every "X requires Y" names the manifest it was read from, at the version being installed at that stop. Requirements do not carry backwards across majors. | `version-lookup.md` §6 |
+| **R6** | Evaluate a version range, never read it. Anything with a `\|\|`, a `<`, or two comparators in one clause goes through `semver.satisfies` first. | `version-lookup.md` §6 |
+| **R7** | A name in an export list is not a working export. Check its declared type and any `@deprecated` tag; `never` means removed. | `plugins.md` §6 |
+
+R6 and R7 exist because both have already produced confident, wrong, specific advice: a Node version reported as unsupported when it was fine, and a required code edit filed under "already satisfied". They are cheap to run and they fail silently when skipped.
 
 ## Scope: v3 and later
 
@@ -74,7 +98,11 @@ State the span explicitly in the report. A v3 project and a v5.31 project are co
 
 ### Step 3: Load only the boundaries you cross
 
-Read `references/boundaries.md`, but only the sections for major boundaries in the span. A project on 5.31 crossing into v6 does not need the v3 to v4 or v4 to v5 sections, and loading them wastes context and invites irrelevant findings.
+Read `references/boundaries.md` first. It is a short index: the coverage bounds, the two-edge fetch rule, and a table saying which boundary files the span needs.
+
+**Then read only those files.** Boundary content is split one file per major, so a span that crosses one boundary loads one file rather than all of them. A project on 5.31 crossing into v6 reads the index, `boundary.v6.md` and `deprecations.md`, and nothing else: the v4 and v5 files would cost context and invite findings that do not apply.
+
+Each `boundary.v*.md` holds the crossing *into* that major plus the undeclared changes *inside* that major's line, because a span that crosses a boundary lands somewhere in the line above it and needs both.
 
 Then read `references/package-coupling.md`. It applies to every span.
 
@@ -125,6 +153,10 @@ Write a file rather than only printing to the terminal. The plan usually needs t
 
 But a stop is only real if it is reachable. Each one needs its plugin versions resolved, because a plugin peering only recent majors can make an intermediate stop impossible to install. If you cannot resolve a stop, label it provisional rather than presenting the sequence as validated. Fewer verified stops beat more hypothetical ones.
 
+**When you drop a stop, name what it costs.** Skipping one is often right: a boundary whose only applicable change is a Node floor is not worth a commit of its own, and a stop that cannot be reached without a forced duplicate major is worse than no stop. But the resulting hop then crosses two boundaries at once, and that is the exact thing the sequence exists to prevent. A plan that shows the evidence for skipping and stays silent on the consequence reads as though the trade were free.
+
+So say both halves: why the stop was dropped, and that a failure in the combined hop could originate at either boundary, so debugging it means bisecting rather than reading the plan. One sentence covers it. The reader can accept the trade once they can see it.
+
 **Size the work honestly.** If the project has two files importing `@sanity/ui` and no custom auth, say the upgrade is small. Inflating scope to look thorough wastes the reader's week. Equally, if the project imports from `sanity/_internal` or has a large custom component surface, say the upgrade is substantial rather than producing a plan that makes hard work look easy.
 
 **Make the plan survive being skimmed.** It will be. A multi-boundary plan runs to several thousand words, and the person reading it is about to spend a week on the work, not an afternoon studying the document. So the top of the plan carries the whole thing in one screen, everything below it is reference to be read as the work reaches it, and findings are grouped by what the reader has to do rather than by which release the change came from. The specific failure to design against: a change that fails silently, sitting in a uniform table between two cosmetic ones, at identical visual weight. Length is not the enemy; flat weighting is.
@@ -141,7 +173,11 @@ But a stop is only real if it is reachable. Each one needs its plugin versions r
 | --- | --- |
 | `references/detect.md` | Always, at step 1 |
 | `references/version-lookup.md` | Always, at step 2 and step 4 |
-| `references/boundaries.md` | Step 3, only the sections in the span (v3 onward) |
+| `references/boundaries.md` | Always, at step 3. Index: coverage bounds and which boundary files to read |
+| `references/boundary.v4.md` | Step 3, if the span crosses into or sits in v4 |
+| `references/boundary.v5.md` | Step 3, if the span crosses into or sits in v5 |
+| `references/boundary.v6.md` | Step 3, if the span crosses into or sits in v6 |
+| `references/deprecations.md` | Step 3, always. Short, and not tied to a boundary |
 | `references/package-coupling.md` | Always, at step 6 |
 | `references/plugins.md` | Step 6b, whenever the project has plugins |
 | `references/report-template.md` | Step 7 |

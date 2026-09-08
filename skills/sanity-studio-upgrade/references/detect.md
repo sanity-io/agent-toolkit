@@ -44,11 +44,20 @@ If you find several Studios, ask which one to plan for, or plan for each and say
 
 Read the lockfile, not `package.json`. `"sanity": "^4.20.0"` tells you what was requested; the lockfile tells you what is installed, and the gap between them is often several minor versions of breaking changes.
 
+**Every command in this section runs from the Studio directory, not the repository root.** The Studio is frequently a subdirectory, and the `node_modules` and lockfile that matter are the ones governing *it*. Set the directory from the path chosen in step 1, and do not auto-pick when step 1 found more than one Studio:
+
+```sh
+STUDIO=studio        # or `.`, or apps/studio, packages/cms, whatever step 1 found
+cd "$STUDIO"
+```
+
+Two things to check before trusting a path here. In a pnpm or Yarn workspace the lockfile usually sits at the **workspace root** while `node_modules` is local to the Studio, so the two facts come from different directories. And a Studio with no lockfile of its own is being resolved by a parent manifest, which is itself a finding worth reporting.
+
 ```sh
 # Fastest reliable read, if node_modules exists
 cat node_modules/sanity/package.json | grep '"version"'
 
-# Otherwise, from the lockfile
+# Otherwise, from the lockfile governing this directory (may be at the workspace root)
 grep -A2 '"sanity@' package-lock.json | head -20     # npm
 grep -A2 "^  sanity@" yarn.lock | head -20           # yarn
 grep -A2 "  sanity@" pnpm-lock.yaml | head -20       # pnpm
@@ -70,12 +79,14 @@ Two majors of a shared package such as `@sanity/ui`, or a plugin dragging in `@s
 Read the dependency tree output rather than only the top-level list. Nested entries are where this shows up:
 
 ```sh
-pnpm why @sanity/ui @sanity/icons @sanity/client @sanity/util @sanity/types react styled-components
+pnpm why --json @sanity/ui @sanity/icons @sanity/client @sanity/util @sanity/types react styled-components
 # npm
-npm ls --all @sanity/ui @sanity/icons @sanity/client @sanity/util @sanity/types react styled-components
+npm ls --all --json @sanity/ui @sanity/icons @sanity/client @sanity/util @sanity/types react styled-components
 ```
 
-If you read the lockfile directly instead, **anchor the package name and keep prerelease suffixes**, or you will report findings that do not exist. A loose pattern turns `babel-plugin-styled-components@5.1.36` into a styled-components v5 duplicate, `@sanity/ui@5.0.0-alpha.3` into a nonexistent stable 5.0.0, and `@sentry/react@8.55.2` into a React version:
+**Use the package manager's own output, and treat the grep below as a last resort.** `pnpm why` and `npm ls` parse the lockfile with the tool that wrote it; a regex does not. It will keep working when the lockfile format changes and it cannot confuse one package's name for a substring of another's. `--json` also makes the result parseable rather than scraped, which matters when you need the parent that pulled a version in, not just the version.
+
+Reach for the lockfile directly only when neither is available: no `node_modules`, or the matching package manager is not on the machine. Then **anchor the package name and keep prerelease suffixes**, or you will report findings that do not exist. A loose pattern turns `babel-plugin-styled-components@5.1.36` into a styled-components v5 duplicate, `@sanity/ui@5.0.0-alpha.3` into a nonexistent stable 5.0.0, and `@sentry/react@8.55.2` into a React version:
 
 ```sh
 grep -oE "[/'\"]@?[a-zA-Z0-9@/._-]+@[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?" pnpm-lock.yaml \
@@ -147,9 +158,16 @@ You need the effective `moduleResolution`. Recent `@sanity/*` packages resolve t
 If `tsconfig.json` has an `extends` pointing outside the repository, **follow it if you can and say so if you cannot.** An unresolved `moduleResolution` is a genuine blocker for any plan involving subpath imports, and it belongs in the human questions section by name rather than being quietly skipped.
 
 ```sh
-# If TypeScript is available, this resolves the full inherited config
-npx tsc --showConfig 2>/dev/null | head -40
+# Resolves the full inherited config, including anything reached via `extends`.
+# `--no-install` is required: plain `npx tsc` downloads TypeScript when it is not
+# already present, and this skill does not install anything.
+# Select the fields rather than truncating: `head` will cut a long config off
+# above `moduleResolution` and leave you reporting it as unset.
+npx --no-install tsc --showConfig 2>/dev/null \
+  | grep -E '"(moduleResolution|module|target|jsx|strict|paths)"'
 ```
+
+If that prints nothing, TypeScript is not installed in this directory. Read `tsconfig.json` and follow its `extends` chain by hand instead of installing anything, and if the chain leaves the repository, say so rather than guessing. An unresolved `moduleResolution` belongs in the human questions section by name.
 
 Also record whether `typescript` and `@types/react-dom` are actual devDependencies or are being inherited from a workspace root.
 
