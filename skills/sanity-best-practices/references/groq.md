@@ -37,13 +37,13 @@ Do not assume JavaScript or SQL functions exist in GROQ. Check the [GROQ functio
 - For a conditional value, use `select(featured => title, "Other")`. A standalone `featured => title` is not a value expression. Conditional projection branches use objects, such as `featured => {title}`.
 - To count matching documents, use `count(*[_type == "article"])`.
 
-In this example, `metadata` is a placeholder for an object field defined in your schema. Replace it with your field name to inspect the properties of that object:
+To inspect the fields present on a document, fetch it by ID:
 
 ```groq
-*[_id == $id][0].metadata
+*[_id == $id][0]
 ```
 
-Read the property names from the returned object. This does not require a key-enumeration function in the query.
+Read the property names from the returned object outside GROQ. This does not require a key-enumeration function in the query.
 
 ### Check the complete expression
 
