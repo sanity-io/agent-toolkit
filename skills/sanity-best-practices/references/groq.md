@@ -7,9 +7,7 @@ description: Guidelines for GROQ queries, type safety, performance optimization,
 
 ## Constructing queries before execution
 
-For MCP content operations, pass a GROQ string in `query_documents.query`. Do not include JavaScript imports, template wrappers, or `defineQuery()` in that string. The application-code sections below explain when to use those wrappers.
-
-Start with the smallest query that returns the requested result. Use known document IDs, types, and fields, and pass filter values through `params`:
+Start with the smallest query that returns the requested result. Use known document IDs, types, and fields, and use query parameters for filter values:
 
 ```groq
 *[_id == $id][0]{_id, title, "launchCode": metadata.launchCode}
