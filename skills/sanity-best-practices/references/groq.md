@@ -5,10 +5,67 @@ description: Guidelines for GROQ queries, type safety, performance optimization,
 
 # GROQ Query Maintenance & Best Practices
 
+## Constructing queries before execution
+
+For MCP content operations, pass a GROQ string in `query_documents.query`. Do not include JavaScript imports, template wrappers, or `defineQuery()` in that string. The application-code sections below explain when to use those wrappers.
+
+Start with the smallest query that returns the requested result. Use known document IDs, types, and fields, and pass filter values through `params`:
+
+```groq
+*[_id == $id][0]{_id, title, "launchCode": metadata.launchCode}
+```
+
+### Projection keys and attribute traversal
+
+Plain fields can use `{_id, title}`. Give nested fields and computed expressions an explicit **quoted** output key:
+
+```groq
+*[_type == "article"][0...10]{
+  _id,
+  "displayName": title,
+  "slug": slug.current,
+  "launchCode": metadata["launchCode"]
+}
+```
+
+`{displayName: title}` is invalid: quote the alias. `{slug.current}` and `{metadata["launchCode"]}` also need explicit keys. After a dot, use an attribute name, such as `.title`; do not write `.(title)`.
+
+### Use functions that GROQ actually provides
+
+Do not assume JavaScript or SQL functions exist in GROQ. Check the [GROQ functions reference](https://www.sanity.io/docs/specifications/groq-functions) for unfamiliar operations.
+
+- To join an array into a string, use `array::join(tags, ", ")`. There is no built-in `string::join()`.
+- There is no built-in `keys()`, `object::keys()`, or `array::keys()`. To report the properties present in an object, retrieve that object and inspect the returned JSON outside GROQ. Do not retry by guessing another namespace. To learn declared fields instead, read the schema.
+- For a conditional value, use `select(featured => title, "Other")`. A standalone `featured => title` is not a value expression. Conditional projection branches use objects, such as `featured => {title}`.
+- To count matching documents, use `count(*[_type == "article"])`.
+
+For example, to inspect the properties actually present in one document's metadata:
+
+```groq
+*[_id == $id][0].metadata
+```
+
+Read the property names from the returned object. This does not require a key-enumeration function in the query.
+
+### Check the complete expression
+
+Before submission, check that filters and slices close with `]`, projections with `}`, and function calls with `)`. For example:
+
+```groq
+*[_type == "article" && featured == true][0...10]{title}
+```
+
+```groq
+count(*[_type == "article" && featured == true])
+```
+
+After a syntax rejection, use the reported position and error to inspect the relevant expression, correct it, and retry. Do not resend the unchanged query or change a function namespace without checking that the replacement exists.
+
 Use this contents list to jump to the query concern you need to solve.
 
 ## Table of Contents
 
+- Constructing queries before execution
 - Query definition and imports
 - Query fragments
 - Expansion patterns
@@ -20,7 +77,7 @@ Use this contents list to jump to the query concern you need to solve.
 ## 1. Query Definition & Imports
 
 ### The `defineQuery` Function
-**ALWAYS** wrap GROQ queries in `defineQuery` for TypeGen support. The import location depends on your framework:
+**In application code**, wrap GROQ queries in `defineQuery` for TypeGen support. The import location depends on your framework:
 
 ```typescript
 // Framework-agnostic (Angular, Remix, SvelteKit, Astro, vanilla)
