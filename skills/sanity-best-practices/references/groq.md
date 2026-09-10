@@ -13,6 +13,8 @@ Start with the smallest query that returns the requested result. Use known docum
 *[_id == $id][0]{_id, title, "launchCode": metadata.launchCode}
 ```
 
+Before executing queries with reference lookups in filters, mixed `OR` conditions, computed sorts, or deep pagination, review [Performance Rules](#6-performance-rules). A small returned result does not establish that the query is cheap to execute.
+
 ### Projection keys and attribute traversal
 
 Plain fields can use `{_id, title}`. Give nested fields and computed expressions an explicit **quoted** output key:
@@ -235,8 +237,8 @@ count(*[_type == "post" && defined(slug.current)])
   "mainCast": castMembers[role == "lead"]->{name}
 }
 
-// Check if value exists in array
-*[_type == "post" && "tech" in categories[]->slug.current]
+// Match a known category ID (see Avoid Joins in Filters for dynamic lookups)
+*[_type == "post" && $categoryId in categories[]._ref]
 ```
 
 ### Special Variables
@@ -256,7 +258,7 @@ count(*[_type == "post" && defined(slug.current)])
 ## 6. Performance Rules
 
 ### Optimizable vs Non-Optimizable Filters
-GROQ uses indexes for **optimizable** filters. Non-optimizable filters scan ALL documents.
+GROQ uses indexes for **optimizable** filters. Other expressions require evaluating candidate documents. An indexed `_type` constraint can narrow those candidates; without an indexed restriction, the query may scan the dataset.
 
 | Pattern | Optimizable | Example |
 |---------|-------------|---------|
@@ -265,12 +267,12 @@ GROQ uses indexes for **optimizable** filters. Non-optimizable filters scan ALL 
 | `slug.current == $slug` | ✅ Yes | `*[slug.current == "hello"]` |
 | `defined(field)` | ✅ Yes | `*[defined(publishedAt)]` |
 | `references($id)` | ✅ Yes | `*[references("author-123")]` |
-| `field->attr == x` | ❌ No | Resolves reference for every doc |
+| `field->attr == x` | ❌ No | Resolves references while evaluating candidates |
 | `fieldA < fieldB` | ❌ No | Compares two attributes |
 
-**Fix non-optimizable filters by stacking:**
+**Reduce the candidates for non-optimizable filters:**
 ```groq
-// Stack optimizable filters FIRST to reduce search space
+// Add selective indexed constraints; textual order does not force execution order
 *[_type == "product" && defined(salePrice) && salePrice < displayPrice]
 ```
 
@@ -285,19 +287,53 @@ Reference resolution (`->`) in filters is expensive. Use `_ref` instead:
 *[_type == "post" && author._ref == "author-bob-woodward-id"]
 ```
 
-**When you need dynamic lookups** (don't know the ID upfront):
+**When you need dynamic lookups** (don't know the IDs upfront), fetch all matching IDs and pass them as a parameter:
 
 ```groq
 // Two-step approach:
-// 1. Get the reference ID first
-*[_type == "author" && name == "Bob Woodward"][0]._id
+// 1. Get every matching author ID
+*[_type == "author" && name == $name]._id
 
-// 2. Use that ID in your main query
-*[_type == "post" && author._ref == $authorId]
-
-// Or use a subquery (still better than -> in filter):
-*[_type == "post" && author._ref in *[_type == "author" && name == "Bob Woodward"]._id]
+// 2. Pass every returned ID as $authorIds in the main query
+*[_type == "post" && author._ref in $authorIds]
 ```
+
+Using `[0]` in the lookup would silently drop other authors with the same name. Discover the actual reference target types from the schema. Keep the same dataset, API version, and perspective in both requests. If the ID set needs pagination, collect all pages rather than silently truncating it; two requests can observe intervening content changes. A nested lookup is another option, but verify its timings rather than assuming it is faster.
+
+### Mixed OR Filters Can Still Require Joins
+
+```groq
+// Resolves brands while testing product candidates
+*[_type == "product" && (
+  name match $search || brand->name match $search
+)]{_id, name, "brand": brand->name} | order(name asc)
+```
+
+The indexed `name match` branch does not make the whole `OR` optimizable: a product can qualify solely through its brand. Resolve matching brand IDs first, using the schema's target type (here `brand`):
+
+```groq
+*[_type == "brand" && name match $search]._id
+```
+
+Pass that complete result as `$brandIds`, keeping `$search` unchanged (for example, `"Acme*"`):
+
+```groq
+*[_type == "product" && (
+  name match $search || brand._ref in $brandIds
+)] | order(name asc) {
+  _id,
+  name,
+  "brand": brand->name
+}
+```
+
+An empty `$brandIds` array still permits direct product-name matches. Keep `match` semantics, both `OR` branches, ordering, and returned fields intact. Dereferencing in the projection is appropriate when the caller needs the related value; the expensive pattern here is dereferencing to decide which documents qualify.
+
+### Small Results Do Not Prove Cheap Execution
+
+A final slice limits returned results, but may still leave substantial filtering or sorting work. `count()` can also be expensive when its filter requires joins or other per-document evaluation. Add pagination when the task permits it; do not add a limit that changes a request for all results.
+
+Before claiming an improvement, compare results and timings on representative data with the same parameters, API version, and perspective. For a two-step rewrite, include both requests in the timing. Check multiple matching reference targets, no matching targets, and missing references. Local GROQ evaluation can check semantics, but cannot establish Content Lake performance.
 
 ### Merge Repeated Reference Resolutions
 Each `->` is a subquery. Don't repeat it:
