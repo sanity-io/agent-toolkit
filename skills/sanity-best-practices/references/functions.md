@@ -5,7 +5,7 @@ description: Rules for Sanity Functions — serverless event handlers that react
 
 # Sanity Functions
 
-Serverless event handlers hosted on Sanity's infrastructure, configured via **Blueprints** and triggered by document lifecycle events.
+Serverless event handlers hosted on Sanity's infrastructure, configured via **Blueprints** and triggered by document lifecycle events, Media Library events, content-availability (sync tag) events, or a schedule.
 
 > Always use `npx sanity@latest` so CLI and runtime versions stay current.
 
@@ -17,6 +17,7 @@ Serverless event handlers hosted on Sanity's infrastructure, configured via **Bl
 - Automate workflows (translation, tagging, cross-posting)
 - Sync content to external systems
 - Invoke Agent Actions in response to content events
+- Run recurring work on a schedule (cache expiry, digests, periodic sync)
 
 ## When NOT to use
 
@@ -171,7 +172,7 @@ npx sanity@latest functions logs my-function --watch
 
 ## Handler Reference
 
-Every handler receives `{ context, event }`. Sync tag invalidate handlers additionally receive `done` — see `defineSyncTagInvalidateFunction` below.
+Every handler receives `{ context, event }`. Sync tag invalidate handlers additionally receive `done`; scheduled handlers receive only `{ context }` — see `defineSyncTagInvalidateFunction` and `defineScheduledFunction` below.
 
 ### `context`
 
@@ -307,6 +308,78 @@ export const handler = syncTagInvalidateEventHandler(async ({ context, event, do
 - **Always call `done`.** It is the completion signal, not a convenience. Call it on the error path too, otherwise a failed purge stalls every subscribed client.
 - **One sync-tag-invalidate function per dataset.** Several of them on the same dataset race each other and produce unpredictable invalidation.
 - **Don't write content from this handler.** A mutation makes new content queryable, which fires the function again — an immediate loop that burns through rate limits.
+
+### `defineScheduledFunction`
+
+Runs on a clock instead of a content event — nightly cleanup, cache expiry, digest emails, periodic sync. No document triggers it, so there is no `event.data`.
+
+Scheduled functions are **organization-scoped**: they carry no project or dataset context. The Stack must be org-scoped (`blueprints init . --organization-id <id>`, or `blueprints promote` an existing project Stack), and any dataset access needs an explicit robot token — `context.clientOptions` will not supply `projectId` or `dataset` for you.
+
+**Blueprint:**
+```typescript
+import { defineBlueprint, defineScheduledFunction, defineRobotToken } from '@sanity/blueprints'
+
+export default defineBlueprint({
+  resources: [
+    defineRobotToken({
+      name: 'my-robot',
+      label: 'My Robot',
+      memberships: [
+        { resourceType: 'project', resourceId: 'abc123', roleNames: ['editor'] },
+      ],
+    }),
+    defineScheduledFunction({
+      name: 'expire-cache',
+      event: { expression: '0 0 * * *' },   // midnight daily
+      timezone: 'America/New_York',          // IANA identifier; defaults to UTC
+      robotToken: '$.resources.my-robot.token',
+    }),
+  ],
+})
+```
+
+Scaffold with `npx sanity@latest functions add --name expire-cache --type scheduled-function --language ts`.
+
+**Schedule options:**
+
+| Form | Example |
+|:---|:---|
+| CRON expression | `event: { expression: '0 0 * * *' }` — minute, hour, day-of-month, month, day-of-week |
+| Explicit fields | `event: { minute: '0', hour: '0', dayOfMonth: '*', month: '*', dayOfWeek: '*' }` |
+
+Omit `timezone` and the schedule runs in UTC. Cadence limits are plan-dependent — check the Functions pricing tier before scheduling anything minutely.
+
+**Handler** — uses `scheduledEventHandler` and receives only `{ context }`:
+
+```typescript
+// functions/expire-cache/index.ts
+import { scheduledEventHandler } from '@sanity/functions'
+import { createClient } from '@sanity/client'
+
+export const handler = scheduledEventHandler(async ({ context }) => {
+  // projectId and dataset are NOT in context here — set them explicitly
+  const client = createClient({
+    projectId: 'abc123',
+    dataset: 'production',
+    apiVersion: '2025-05-08',
+    token: context.clientOptions?.token,   // from the robotToken above
+  })
+
+  const stale = await client.fetch(
+    `*[_type == "cacheEntry" && expiresAt < now()]._id`,
+  )
+
+  if (!context.local && stale.length) {
+    await stale
+      .reduce((tx, id) => tx.delete(id), client.transaction())
+      .commit()
+  }
+
+  console.log(`Expired ${stale.length} entries`)
+})
+```
+
+Deploying an org-scoped Stack requires the organization admin role, the blueprint deployer role, or a token with `sanity.blueprints.deploy`. Test with `npx sanity@latest functions dev` — playground runs don't count against usage quotas.
 
 ---
 
