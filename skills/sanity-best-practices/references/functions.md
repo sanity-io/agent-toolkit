@@ -5,7 +5,7 @@ description: Rules for Sanity Functions — serverless event handlers that react
 
 # Sanity Functions
 
-Serverless event handlers hosted on Sanity's infrastructure, configured via **Blueprints** and triggered by document lifecycle events, Media Library events, content-availability (sync tag) events, or a schedule.
+Serverless event handlers hosted on Sanity's infrastructure, configured via **Blueprints** and triggered by document lifecycle events, Media Library events, content-availability (sync tag) events, a schedule, or a direct call from another function.
 
 > Always use `npx sanity@latest` so CLI and runtime versions stay current.
 
@@ -18,6 +18,7 @@ Serverless event handlers hosted on Sanity's infrastructure, configured via **Bl
 - Sync content to external systems
 - Invoke Agent Actions in response to content events
 - Run recurring work on a schedule (cache expiry, digests, periodic sync)
+- Split a pipeline into small, separately-configured steps that call each other (PubSub + `invoke`)
 
 ## When NOT to use
 
@@ -81,7 +82,7 @@ npx sanity@latest functions add \
   --installer npm
 ```
 
-`--type` options: `document-create`, `document-update`, `document-delete`, `media-library-asset-create`, `media-library-asset-update`, `media-library-asset-delete`, `scheduled-function`, `sync-tag-invalidate`.
+`--type` options: `document-create`, `document-update`, `document-delete`, `media-library-asset-create`, `media-library-asset-update`, `media-library-asset-delete`, `scheduled-function`, `sync-tag-invalidate`, `pub-sub`.
 
 ### 3. Configure the Blueprint
 
@@ -172,7 +173,7 @@ npx sanity@latest functions logs my-function --watch
 
 ## Handler Reference
 
-Every handler receives `{ context, event }`. Sync tag invalidate handlers additionally receive `done`; scheduled handlers receive only `{ context }` — see `defineSyncTagInvalidateFunction` and `defineScheduledFunction` below.
+Every handler receives `{ context, event }`. Sync tag invalidate handlers additionally receive `done`; scheduled handlers receive only `{ context }` — see `defineSyncTagInvalidateFunction` and `defineScheduledFunction` below. PubSub handlers receive whatever the calling function passed to `invoke`.
 
 ### `context`
 
@@ -198,7 +199,7 @@ Every handler receives `{ context, event }`. Sync tag invalidate handlers additi
 }
 ```
 
-For sync tag invalidate functions, `event.data` is `{ syncTags: string[] }` instead.
+For sync tag invalidate functions, `event.data` is `{ syncTags: string[] }` instead. For PubSub functions, `event.data` is whatever the caller passed — no schema is enforced.
 
 When testing locally, `context.clientOptions` only has `projectId` and `apiHost`. Use `--dataset` and `--with-user-token` flags to supply the rest.
 
@@ -380,6 +381,114 @@ export const handler = scheduledEventHandler(async ({ context }) => {
 ```
 
 Deploying an org-scoped Stack requires the organization admin role, the blueprint deployer role, or a token with `sanity.blueprints.deploy`. Test with `npx sanity@latest functions dev` — playground runs don't count against usage quotas.
+
+### `definePubSubFunction`
+
+A function with no trigger of its own — it runs only when another function calls it with `invoke`. Use it to break a pipeline into separately-configured steps instead of chaining them through document mutations.
+
+Before `invoke`, the only way for one function to reach another was to write a document and let the resulting change event fire the next function. That forced every step to be modeled as a mutation, even steps that had nothing to do with the document (posting to Slack, calling an external API). A PubSub function is called directly, so the intermediate write disappears.
+
+**Blueprint** — `name` is the only required option:
+```typescript
+import { defineBlueprint, definePubSubFunction } from '@sanity/blueprints'
+
+export default defineBlueprint({
+  resources: [
+    definePubSubFunction({ name: 'slack-post' }),
+  ],
+})
+```
+
+Scaffold with `npx sanity@latest functions add --name slack-post --type pub-sub --installer npm`.
+
+There is no `event` block — no `on`, `filter`, `projection`, or `resource`. The other `defineDocumentFunction` options (`memory`, `timeout`, `runtime`, `env`, `robotToken`) still apply, which is the point: each step gets its own resource budget and its own permissions.
+
+**Handler** — uses `pubSubEventHandler`:
+
+```typescript
+// functions/slack-post/index.ts
+import { pubSubEventHandler } from '@sanity/functions'
+
+export const handler = pubSubEventHandler(async ({ context, event }) => {
+  // event.data is whatever the caller passed — validate it, it is not typed
+  // or validated by the platform the way a document event is
+  const { text } = event.data
+
+  await fetch(process.env.SLACK_WEBHOOK_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text }),
+  })
+})
+```
+
+The callee can't tell it was invoked by another function rather than by a document event — it just receives the `context` and `event` it was handed.
+
+#### Calling it with `invoke`
+
+```typescript
+// functions/on-publish/index.ts
+import { documentEventHandler, invoke } from '@sanity/functions'
+
+export const handler = documentEventHandler(async ({ context, event }) => {
+  await invoke('slack-post', {
+    context,
+    event: { data: { text: `Published ${event.data.title}` } },
+  })
+})
+```
+
+`invoke(name, { context, event }, options?)` takes an optional third argument, `{ sync: boolean }`, defaulting to `false`.
+
+| | Async (default, `sync: false`) | Sync (`sync: true`) |
+|:---|:---|:---|
+| Waits for completion? | No — only for acceptance | Yes |
+| Returns the callee's response? | No | Yes |
+| Best for | Fan-out, chaining steps, privilege separation | Steps that genuinely can't proceed without the callee's result |
+| Use liberally? | Yes — this is the default pattern | No — reserve for what async can't do |
+
+**Async resolving means "accepted", not "done".** `invoke` throws if the request itself is rejected (bad function name, malformed payload), but a resolved promise says only that the invocation was queued.
+
+**❌ Incorrect — treating an async `invoke` as if it returned the callee's output:**
+```typescript
+const result = await invoke('slack-post', { context, event })
+if (result.ok) { /* never runs as expected — result is not the callee's return value */ }
+
+// Same mistake, sequenced: this read happens right after the invocation is
+// accepted, not after resize-image has resized anything.
+await invoke('resize-image', { context, event })
+const resized = await client.fetch(`*[_id == $id][0].resizedUrl`, { id: event.data._id })
+```
+
+**✅ Correct — fire-and-forget, catching only acceptance errors:**
+```typescript
+try {
+  await invoke('slack-post', { context, event: { data: event.data } })
+} catch (err) {
+  // Only failures to *accept* the invocation land here
+  console.error('Failed to trigger slack-post:', err)
+}
+```
+
+**✅ Correct — `sync: true` for a real dependency:**
+```typescript
+const response = await invoke(
+  'validate-content',
+  { context, event: { data: event.data } },
+  { sync: true },
+)
+
+if (!response.valid) return { skipped: true, reason: response.reason }
+
+await invoke('publish-content', { context, event: { data: event.data } })
+```
+
+**Rules:**
+
+- **Default to async.** `sync: true` ties up the caller's timeout and memory budget for as long as the callee runs, and serializes work that should be parallel. Reaching for it on most calls usually means the logic belongs in one function, not two.
+- **Never `sync: true` in a fan-out loop.** `await invoke(..., { sync: true })` inside a `for` loop runs batches one at a time and blocks the caller until the last one finishes — the opposite of what fan-out is for.
+- **Validate `event.data` in the callee.** Nothing between the two functions checks its shape.
+- **Recursion limits still apply.** A chain of invocations counts toward the same rate limits as event-triggered runs; two PubSub functions invoking each other loop just as fast as a self-triggering document function.
 
 ---
 
@@ -630,6 +739,40 @@ export const handler = documentEventHandler(async ({ context, event }) => {
   })
 })
 ```
+
+### Fan out to several PubSub functions on publish
+
+One document event, many independent side effects — each in its own function with its own timeout, memory, and permissions.
+
+**Blueprint:**
+```typescript
+export default defineBlueprint({
+  resources: [
+    defineDocumentFunction({
+      name: 'on-publish',
+      event: { on: ['create', 'update'], filter: "_type == 'post'" },
+    }),
+    definePubSubFunction({ name: 'post-to-bluesky' }),
+    definePubSubFunction({ name: 'post-to-linkedin' }),
+    definePubSubFunction({ name: 'post-to-mastodon' }),
+  ],
+})
+```
+
+**Handler:**
+```typescript
+import { documentEventHandler, invoke } from '@sanity/functions'
+
+export const handler = documentEventHandler(async ({ context, event }) => {
+  await Promise.all([
+    invoke('post-to-bluesky', { context, event }),
+    invoke('post-to-linkedin', { context, event }),
+    invoke('post-to-mastodon', { context, event }),
+  ])
+})
+```
+
+`Promise.all` here resolves once every invocation is *accepted* — not once every post is live. If one social API is slow, that slowness stays inside its own function instead of eating this handler's timeout.
 
 ### Scope to a specific dataset
 
