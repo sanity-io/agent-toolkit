@@ -171,7 +171,7 @@ npx sanity@latest functions logs my-function --watch
 
 ## Handler Reference
 
-Every handler receives `{ context, event }`:
+Every handler receives `{ context, event }`. Sync tag invalidate handlers additionally receive `done` — see `defineSyncTagInvalidateFunction` below.
 
 ### `context`
 
@@ -196,6 +196,8 @@ Every handler receives `{ context, event }`:
   }
 }
 ```
+
+For sync tag invalidate functions, `event.data` is `{ syncTags: string[] }` instead.
 
 When testing locally, `context.clientOptions` only has `projectId` and `apiHost`. Use `--dataset` and `--with-user-token` flags to supply the rest.
 
@@ -253,6 +255,58 @@ export default defineBlueprint({
   ],
 })
 ```
+
+### `defineSyncTagInvalidateFunction`
+
+Fires when updated content becomes available for querying — after a write has propagated to the query layer, not at mutation time. The event carries the **sync tags** affected by that update: the same tags the Live Content API returns alongside query results, so you can purge exactly the cached entries that went stale instead of guessing from document types.
+
+**Blueprint:**
+```typescript
+import { defineBlueprint, defineSyncTagInvalidateFunction } from '@sanity/blueprints'
+
+export default defineBlueprint({
+  resources: [
+    defineSyncTagInvalidateFunction({
+      name: 'invalidate-tags',
+      // Scope to one dataset so a shared blueprint doesn't fire against staging
+      event: { resource: { type: 'dataset', id: 'myProjectId.production' } },
+    }),
+  ],
+})
+```
+
+Scaffold with `npx sanity@latest functions add --name invalidate-tags --type sync-tag-invalidate`.
+
+There is no `on`, `filter`, or `projection` — the function fires for every batch of invalidated tags on the dataset. `event.resource` is the only scoping mechanism.
+
+**Handler** — uses `syncTagInvalidateEventHandler`, which passes a third argument, `done`:
+
+```typescript
+// functions/invalidate-tags/index.ts
+import { syncTagInvalidateEventHandler } from '@sanity/functions'
+
+export const handler = syncTagInvalidateEventHandler(async ({ context, event, done }) => {
+  const { syncTags } = event.data
+
+  if (!context.local) {
+    await fetch(process.env.CACHE_PURGE_URL!, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tags: syncTags }),
+    })
+  }
+
+  // Signals that invalidation finished. Clients waiting on the Live Content
+  // API block until this resolves — skip it and they never see the update.
+  await done(syncTags)
+})
+```
+
+**Rules:**
+
+- **Always call `done`.** It is the completion signal, not a convenience. Call it on the error path too, otherwise a failed purge stalls every subscribed client.
+- **One sync-tag-invalidate function per dataset.** Several of them on the same dataset race each other and produce unpredictable invalidation.
+- **Don't write content from this handler.** A mutation makes new content queryable, which fires the function again — an immediate loop that burns through rate limits.
 
 ---
 
