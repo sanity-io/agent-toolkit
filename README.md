@@ -12,7 +12,7 @@ Collection of resources to help AI agents build better with [Sanity](https://www
 ## Features
 
 - **MCP server:** Direct access to your Sanity projects (content, datasets, releases, schemas) and agent rules.
-- **Agent skills:** Comprehensive best practices skills for Sanity development, content modeling, SEO/AEO, and experimentation. Includes 21 integration/topic guides and 26 focused best-practice rules.
+- **Agent skills:** Comprehensive best practices skills for Sanity development, content modeling, SEO/AEO, and experimentation. Includes 25 integration/topic guides and 26 focused best-practice rules.
 - **Agent Plugin:** `plugin.json`, `skills/`, and `mcp.json` components for any Agent Plugins-compatible client.
 - **Claude Code plugin:** MCP server, agent skills, and slash commands for Claude Code users. Available on the [official Anthropic plugin marketplace](https://claude.com/plugins/sanity).
 - **Cursor plugin:** MCP server, agent skills, and commands on the [Cursor Marketplace](https://cursor.com/marketplace/sanity).
@@ -360,7 +360,7 @@ sanity-io/agent-toolkit/
 └── skills/                        # Agent skills (agentskills.io format)
     ├── sanity-best-practices/     # Comprehensive Sanity skill
     │   ├── SKILL.md               # Skill definition and quick reference
-    │   └── references/            # Canonical content (22 guides)
+    │   └── references/            # Canonical content (25 guides)
     │       ├── get-started.md     # Onboarding guide
     │       ├── nextjs.md          # Next.js integration
     │       ├── groq.md            # GROQ patterns & performance
