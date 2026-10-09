@@ -62,6 +62,7 @@ If the Sanity MCP server (`https://mcp.sanity.io`) is available, use `list_sanit
 | **GROQ** | `groq`, `query`, `defineQuery`, `projection`, `filter`, `order` | `skills/sanity-best-practices/references/groq.md` |
 | **TypeGen** | `typegen`, `typescript`, `types`, `infer`, `satisfies`, `type generation` | `skills/sanity-best-practices/references/typegen.md` |
 | **App SDK** | `app sdk`, `custom app`, `useDocuments`, `useDocument`, `DocumentHandle`, `SanityApp`, `sdk-react` | `skills/sanity-best-practices/references/app-sdk.md` |
+| **Dashboard** | `dashboard`, `defineApplication`, `init --dashboard`, `sdk-react/dashboard`, `deployment.appId`, `app visibility` | `skills/sanity-best-practices/references/dashboard.md` |
 | **Blueprints** | `blueprints`, `IaC`, `infrastructure`, `stack`, `defineBlueprint`, `sanity.blueprint.ts`, `blueprints deploy` | `skills/sanity-best-practices/references/blueprints.md` |
 | **Sanity Functions & Webhooks** | `functions`, `webhook`, `serverless`, `event handler`, `documentEventHandler`, `defineDocumentFunction`, `sanity.blueprint.ts` | `skills/sanity-best-practices/references/functions.md` |
 

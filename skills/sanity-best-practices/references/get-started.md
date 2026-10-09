@@ -146,9 +146,11 @@ Keep its output private.
   retry. If a project, organization, or dataset choice is still missing, ask
   the user to provide it. Do not fall back to an interactive initializer flow.
 - This creates a standalone Studio in `studio/`, alongside your app folder (see `project-structure.md`)
+- If the user wants the Studio to run in the Sanity Dashboard beta, add `--dashboard` and follow the `dashboard` rule.
 
 **If Studio exists:**
 - Read the config to get `projectId` and `dataset`
+- If `sanity.cli.ts` uses `defineApplication`, it runs in the Sanity Dashboard; load the `dashboard` rule before running `dev` or `deploy`
 - Proceed to Step 2
 
 ### Step 2: Check for Existing Schema
