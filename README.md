@@ -304,6 +304,7 @@ Best practices skills that agents like Claude Code, Cursor, GitHub Copilot, etc.
 | **content-modeling-best-practices** | Structured content principles: separation of concerns, references vs embedding, content reuse |
 | **seo-aeo-best-practices** | SEO/AEO with EEAT principles, structured data (JSON-LD), technical SEO patterns |
 | **content-experimentation-best-practices** | A/B testing methodology, statistical foundations, experiment design |
+| **sanity-singletons** | First-class singleton documents via `document.singletons`, Structure helpers, and migrating from userland or plugin-based singletons |
 
 ### Getting started flow
 
@@ -368,7 +369,8 @@ sanity-io/agent-toolkit/
     │       └── ...                # See SKILL.md for full index
     ├── content-modeling-best-practices/      # Modeling guidance + topic references
     ├── seo-aeo-best-practices/               # SEO/AEO guidance + topic references
-    └── content-experimentation-best-practices/ # Experiment design + stats references
+    ├── content-experimentation-best-practices/ # Experiment design + stats references
+    └── sanity-singletons/                    # First-class singleton documents (Studio 6.17+)
 ```
 
 All skills use `references/` for detailed content loaded on demand. The `sanity-best-practices` references are also the canonical source for the MCP server's Sanity rules.

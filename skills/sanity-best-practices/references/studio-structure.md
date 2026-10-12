@@ -43,6 +43,8 @@ export const structure: StructureResolver = (S) =>
 
 ## 4. Singleton Pattern (Critical)
 
+> **Studio 6.17.0+:** Prefer the first-class `document.singletons` config registry (`defineSingleton`, `S.listItem().singleton(id)`), which handles create-menu filtering, duplicate prevention, and default-structure placement automatically. See the `sanity-singletons` skill. The pattern below is for older Studios or when explicit control is needed.
+
 **Singletons are enforced via Structure, NOT schema options.** There is no `singleton: true` schema option.
 
 This is the main case where explicit document IDs are appropriate. For ordinary content documents, let Sanity generate `_id` values and use references or GROQ lookups to connect records.
