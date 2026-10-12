@@ -56,6 +56,7 @@ If the Sanity MCP server (`https://mcp.sanity.io`) is available, use `list_sanit
 | **Rich Text** | `portable text`, `rich text`, `block content`, `serializer`, `PTE`, `marks`, `annotations` | `skills/sanity-best-practices/references/portable-text.md` |
 | **Images** | `image`, `urlFor`, `crop`, `hotspot`, `lqip` | `skills/sanity-best-practices/references/image.md` |
 | **Studio Structure** | `structure`, `desk`, `sidebar`, `singleton`, `grouping` | `skills/sanity-best-practices/references/studio-structure.md` |
+| **Singletons** | `singleton`, `document.singletons`, `defineSingleton`, `settings document`, `sanity-plugin-singleton-management` | `skills/sanity-singletons/SKILL.md` |
 | **Localization** | `i18n`, `translation`, `localization`, `language`, `multilingual`, `localized singleton` | `skills/sanity-best-practices/references/localization.md` |
 | **SEO** | `seo`, `metadata`, `sitemap`, `og image`, `open graph`, `json-ld`, `redirect` | `skills/sanity-best-practices/references/seo.md` |
 | **Shopify/Hydrogen** | `shopify`, `hydrogen`, `e-commerce`, `storefront`, `sanity connect` | `skills/sanity-best-practices/references/hydrogen.md` |
