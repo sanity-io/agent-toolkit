@@ -298,23 +298,20 @@ defineField({
 
 **Phase 1: Deprecate** — Apply the deprecation pattern above. Deploy.
 
-**Phase 2: Migrate** — Update frontend to use new fields (with `coalesce()` fallbacks). Create a migration:
+**Phase 2: Backfill (additive)** — Copy the old value into the new field and keep the old field. Deploy readers and writers that tolerate both fields (use `coalesce()` fallbacks in queries and write both fields until cutover) so rolling deployments and rollbacks keep working.
 
 ```typescript
-// migrations/rename-oldTitle-to-newTitle/index.ts
-import {defineMigration, at, setIfMissing, unset} from 'sanity/migrate'
+// migrations/backfill-newTitle-from-oldTitle/index.ts
+import {defineMigration, at, setIfMissing} from 'sanity/migrate'
 
 export default defineMigration({
-  title: 'Rename oldTitle to newTitle',
+  title: 'Backfill newTitle from oldTitle',
   documentTypes: ['article'],
   filter: 'defined(oldTitle) && !defined(newTitle)',
   migrate: {
     document(doc) {
       if (!doc.oldTitle || doc.newTitle) return
-      return [
-        at('newTitle', setIfMissing(doc.oldTitle)),
-        at('oldTitle', unset())
-      ]
+      return at('newTitle', setIfMissing(doc.oldTitle))
     }
   }
 })
@@ -322,13 +319,32 @@ export default defineMigration({
 
 ```bash
 # Dry run first (default)
-sanity migrations run rename-oldTitle-to-newTitle
+sanity migrations run backfill-newTitle-from-oldTitle
 
 # Execute when ready
-sanity migrations run rename-oldTitle-to-newTitle --no-dry-run
+sanity migrations run backfill-newTitle-from-oldTitle --no-dry-run
 ```
 
-**Phase 3: Remove** — Once `oldTitle` is undefined for all documents, delete the field definition.
+**Phase 3: Clean up (destructive)** — Unset `oldTitle` only after every reader and writer, including versions you might roll back to, uses `newTitle` alone. Unsetting earlier breaks any deployment still reading `oldTitle`, and the data is not recoverable from the schema.
+
+```typescript
+// migrations/unset-oldTitle/index.ts
+import {defineMigration, at, unset} from 'sanity/migrate'
+
+export default defineMigration({
+  title: 'Unset legacy oldTitle',
+  documentTypes: ['article'],
+  filter: 'defined(oldTitle) && defined(newTitle)',
+  migrate: {
+    document(doc) {
+      if (!doc.newTitle) return
+      return at('oldTitle', unset())
+    }
+  }
+})
+```
+
+**Phase 4: Remove** — Once `oldTitle` is undefined for all documents, delete the field definition.
 
 ## 8. Validation Patterns
 
