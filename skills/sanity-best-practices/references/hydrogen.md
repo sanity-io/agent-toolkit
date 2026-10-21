@@ -223,7 +223,7 @@ export default defineConfig({
         },
       },
       previewUrl: {
-        origin: 'http://localhost:3000',
+        initial: 'http://localhost:3000',
         previewMode: { enable: '/api/preview' },
       },
     }),
