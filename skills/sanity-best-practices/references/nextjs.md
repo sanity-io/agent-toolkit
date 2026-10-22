@@ -346,7 +346,7 @@ Create the Studio as its own app from the repo root — **not inside the Next.js
 npm create sanity@latest -- --project <projectId> --dataset production --template clean --typescript --output-path studio
 ```
 
-Run it with `npm run dev` inside `studio/` (defaults to http://localhost:3333). For Visual Editing, point the Presentation Tool's `previewUrl.origin` at the Next.js app (see `visual-editing.md`).
+Run it with `npm run dev` inside `studio/` (defaults to http://localhost:3333). For Visual Editing, point the Presentation Tool's `previewUrl.initial` at the Next.js app (see `visual-editing.md`).
 
 ### Migrating an Existing Embedded Studio
 
@@ -355,7 +355,7 @@ Embedded Studios (`<NextStudio />` mounted at a route like `/app/studio/[[...too
 1. Create a standalone Studio folder as above, reusing your existing `projectId` and dataset.
 2. Move `sanity.config.ts`, `sanity.cli.ts`, and your schema types into it.
 3. Delete the `/app/studio/[[...tool]]/` route from the Next.js app. Keep `next-sanity` — the app still needs it for fetching, Live Content, and Visual Editing.
-4. Add the app's URLs to CORS origins and set the Presentation Tool's `previewUrl.origin` to the app's URL.
+4. Add the app's URLs to CORS origins and set the Presentation Tool's `previewUrl.initial` to the app's URL.
 
 ## 6. Setup: Draft Mode
 

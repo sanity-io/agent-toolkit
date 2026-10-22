@@ -75,8 +75,7 @@ export default defineConfig({
     presentationTool({
       resolve, // Document locations (see below)
       previewUrl: {
-        // The front-end origin — required when the Studio runs standalone
-        origin: process.env.SANITY_STUDIO_PREVIEW_ORIGIN || 'http://localhost:3000',
+        initial: process.env.SANITY_STUDIO_PREVIEW_URL || 'http://localhost:3000',
         previewMode: {
           enable: '/api/draft-mode/enable',
         },
@@ -85,6 +84,8 @@ export default defineConfig({
   ],
 })
 ```
+
+A relative `initial` (e.g. `'/en'`) resolves against the Studio's origin, so use an absolute URL when the front-end is a separate app. Don't use the deprecated `previewUrl.origin`: it is ignored whenever `initial` is a string.
 
 ### Document Locations
 
