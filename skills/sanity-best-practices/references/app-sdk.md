@@ -328,6 +328,8 @@ function DocumentActions({ handle }: { handle: DocumentHandle }) {
 
 The App SDK uses React Suspense. Every data-fetching component must be wrapped.
 
+> **Inside Studio form components:** When App SDK hooks (or `React.lazy`, `use()`) run in a custom `components.input`, `components.field`, `components.item`, or a plugin's `form.components`, the boundary placement, fallback sizing, and new-document gating have Studio-specific rules. See the `sanity-form-component-suspense` skill.
+
 ### One Hook Per Component
 
 ```typescript
