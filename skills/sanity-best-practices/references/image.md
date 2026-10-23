@@ -11,7 +11,6 @@ description: "Best practices for handling images in Sanity: Schema, URL generati
 ```typescript
 defineField({
   name: 'mainImage',
-  title: 'Main Image',
   type: 'image',
   options: {
     hotspot: true // CRITICAL

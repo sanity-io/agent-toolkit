@@ -13,6 +13,7 @@ I'll review your Sanity code for best practices. Here's what I check:
    - Using `defineType`, `defineField`, `defineArrayMember`
    - Icons assigned from `@sanity/icons`
    - Proper validation rules
+   - No redundant `title` that only repeats the `name` (e.g. `name: 'author', title: 'Author'`)
 
 2. **Data Modeling**
    - "Data > Presentation" philosophy (no `bigHero`, `redButton`)
