@@ -204,7 +204,6 @@ function isValidPath(value: string | undefined) {
 
 export const redirectType = defineType({
   name: "redirect",
-  title: "Redirect",
   type: "document",
   icon: LinkIcon,
   validation: (Rule) =>

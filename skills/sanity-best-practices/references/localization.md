@@ -187,7 +187,6 @@ import { defineType, defineField } from 'sanity'
 
 export const homePageType = defineType({
   name: 'homePage',
-  title: 'Home Page',
   type: 'document',
   icon: HomeIcon,
   fields: [

@@ -33,6 +33,7 @@ Always use the helper functions from `sanity` for type safety and autocompletion
 - **ALWAYS** use `defineType` for the root export.
 - **ALWAYS** use `defineField` for fields.
 - **ALWAYS** use `defineArrayMember` for items inside arrays.
+- **OMIT** `title` when it only repeats the `name`. It is optional and defaults to the title-cased `name` (`mainImage` → "Main Image"), so never write `name: 'author', title: 'Author'`. Set it only when it adds something: acronyms (`'SEO'`), clarification (`'Alternative Text'` for `alt`), or notes like `'(Deprecated)'`.
 
 ```typescript
 import { defineType, defineField, defineArrayMember } from 'sanity'
@@ -40,7 +41,6 @@ import { TagIcon } from '@sanity/icons/Tag'
 
 export const article = defineType({
   name: 'article',
-  title: 'Article',
   type: 'document',
   icon: TagIcon,
   fields: [
