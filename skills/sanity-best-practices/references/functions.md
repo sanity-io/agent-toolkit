@@ -128,9 +128,11 @@ export const handler = documentEventHandler<PostData>(async ({ context, event })
   })
 
   try {
-    await client.patch(data._id, {
-      setIfMissing: { firstPublished: new Date().toISOString() },
-    })
+    await client
+      .patch(data._id, {
+        setIfMissing: { firstPublished: new Date().toISOString() },
+      })
+      .commit()
     console.log(`Set firstPublished on ${data._id}`)
   } catch (error) {
     console.error('Failed to patch document:', error)
