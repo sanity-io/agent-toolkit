@@ -84,7 +84,7 @@ Prefer the most structured source available:
 - **Public API:** good for published content and fast prototypes, but document blind spots.
 - **Export files:** reliable snapshots for repeatable transforms; inspect parser output carefully.
 - **Database dumps:** complete but usually more work because relationships and media often require manual joins.
-- **Static HTML or crawling:** viable fallback when no structured export exists, but plan for lower fidelity and manual review.
+- **Static HTML or crawling:** viable fallback when no structured export exists, but plan for lower fidelity and manual review. For text-heavy pages, crawl to main-content Markdown ([Firecrawl /crawl](https://docs.firecrawl.dev/features/crawl?utm_source=agent-toolkit&utm_medium=integration) or any crawler that keeps headings, links, and image URLs) and convert it with `@portabletext/markdown`. Keep HTML when Markdown loses structure you need for custom objects.
 
 Prefer an official bulk export when it exists. It is usually safer than hand-crafting API calls because it is more likely to include drafts, scheduled content, assets, field definitions, and metadata. If required access or credentials are missing, stop and ask for read-only credentials or an export file rather than guessing.
 
@@ -171,7 +171,7 @@ Validate before declaring the migration ready:
 - Confirm all references have non-empty `_ref` values and the targets exist.
 - Confirm images/files are Sanity assets or Media Library assets, with alt text and captions where available.
 - Run `npx sanity@latest documents validate` when the destination schema is available.
-- Crawl the legacy site and the new frontend to verify route coverage, redirects, canonical URLs, metadata, and broken links.
+- Build the legacy URL list from the sitemap plus URLs search engines still index (Firecrawl /map combines both), then crawl the legacy site and the new frontend to verify route coverage, redirects, canonical URLs, metadata, and broken links.
 - For high-value or high-volume pages, run visual regression or screenshot checks against representative legacy and migrated pages.
 - Keep a migration report with skipped content, known cleanup tasks, and fields that require editorial review.
 
