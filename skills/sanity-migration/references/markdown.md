@@ -30,7 +30,7 @@ Do not call Markdown -> HTML -> `htmlToBlocks` "direct conversion." That is an H
 
 ## Schema-Constrained Conversion
 
-For a Sanity block array schema, convert it with `@portabletext/sanity-bridge`:
+For a Sanity block array schema, convert it with `@portabletext/sanity-bridge`. It takes a compiled schema type, so compile the Studio schema types with `createSchema` from `sanity` first and pick the block array type by name:
 
 ```bash
 npm install @portabletext/markdown @portabletext/sanity-bridge
@@ -39,8 +39,11 @@ npm install @portabletext/markdown @portabletext/sanity-bridge
 ```ts
 import {markdownToPortableText} from '@portabletext/markdown'
 import {sanitySchemaToPortableTextSchema} from '@portabletext/sanity-bridge'
+import {createSchema} from 'sanity'
+import {schemaTypes} from './schemaTypes'
 
-const schema = sanitySchemaToPortableTextSchema(sanityBlockArraySchema)
+const sanitySchema = createSchema({name: 'default', types: schemaTypes})
+const schema = sanitySchemaToPortableTextSchema(sanitySchema.get('blockContent'))
 const body = markdownToPortableText(markdown, {schema})
 ```
 
