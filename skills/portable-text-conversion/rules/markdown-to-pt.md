@@ -77,14 +77,16 @@ const blocks = markdownToPortableText(markdown, {
 
 ### Using a Sanity Studio Schema
 
-Use `@portabletext/sanity-bridge` to convert your Sanity block array schema:
+Use `@portabletext/sanity-bridge` to convert your Sanity block array schema. It takes a compiled schema type, so compile your schema types with `createSchema` from `sanity` first and pick the block array type by name:
 
 ```ts
 import {markdownToPortableText} from '@portabletext/markdown'
 import {sanitySchemaToPortableTextSchema} from '@portabletext/sanity-bridge'
+import {createSchema} from 'sanity'
+import {schemaTypes} from './schemaTypes'
 
-// Convert a Sanity block array schema to a Portable Text schema
-const schema = sanitySchemaToPortableTextSchema(sanityBlockArraySchema)
+const sanitySchema = createSchema({name: 'default', types: schemaTypes})
+const schema = sanitySchemaToPortableTextSchema(sanitySchema.get('blockContent'))
 
 const blocks = markdownToPortableText(markdown, {schema})
 ```
