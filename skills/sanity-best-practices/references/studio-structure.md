@@ -43,7 +43,7 @@ export const structure: StructureResolver = (S) =>
 
 ## 4. Singleton Pattern (Critical)
 
-> **Studio 6.17.0+:** Prefer the first-class `document.singletons` config registry (`defineSingleton`, `S.listItem().singleton(id)`), which handles create-menu filtering, duplicate prevention, and default-structure placement automatically. See the `sanity-singletons` skill. The pattern below is for older Studios or when explicit control is needed.
+> **Studio 6.17.0+:** Prefer the first-class `document.singletons` config registry (`defineSingleton`, `S.listItem().singleton(id)`), which handles create-menu filtering, duplicate prevention, and default-structure placement automatically. See the `sanity-singletons` skill. If the singleton's schema type should also back ordinary documents, set `allowNonSingletonDocuments: true` on the definition (Studio versions that include the option) — otherwise registering the singleton removes that type from create menus and the default lists. The pattern below is for older Studios or when explicit control is needed.
 
 **Singletons are enforced via Structure, NOT schema options.** There is no `singleton: true` schema option.
 

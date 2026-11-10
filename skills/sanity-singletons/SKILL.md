@@ -63,17 +63,17 @@ Key facts:
 
 Validation at config-resolution time (all failures aggregate into one `ConfigResolutionError`):
 
-- `id`: non-empty, unique across definitions (inherited ids count — an explicit id may not collide with another definition's inherited one). Used verbatim as a Structure Tool node id, so it is limited to `[a-zA-Z0-9._-]` and may not start with `__edit__`. It also may not match the name of a document type that no singleton claims, since the default content list keys both by id (the string shorthand never trips this — the type it names is claimed by the definition itself).
+- `id`: non-empty, unique across definitions (inherited ids count — an explicit id may not collide with another definition's inherited one). Used verbatim as a Structure Tool node id, so it is limited to `[a-zA-Z0-9._-]` and may not start with `__edit__`. It also may not match the name of a document type that no singleton claims, since the default content list keys both by id (the string shorthand never trips this — the type it names is claimed by the definition itself). A type claimed by a singleton with `allowNonSingletonDocuments: true` keeps its own list item, so it counts as unclaimed for this check.
 - `documentId`: non-empty, unique, published-id shaped (no `drafts.` / `versions.` prefix, only `[a-zA-Z0-9._-]`).
 - `schemaType`: must name an existing document type. Need not be unique.
 - Templates: an untagged template must not reuse a definition id (the generated singleton template claims it); at most one template may carry a given `singleton` tag; tags must reference registered definitions.
 
 ## What Studio does automatically
 
-1. **Generates a dedicated initial value template per singleton** — tagged with the definition id via `ResolvedTemplate.singleton`, value from `definition.initialValue ?? schemaType.initialValue` — instead of the plain per-type template, and **removes tagged templates from every "create new" surface** (global create menu, structure panes, reference inputs). The tagged template stays in `source.templates`, so opening the singleton before it exists still applies its initial value.
+1. **Generates a dedicated initial value template per singleton** — tagged with the definition id via `ResolvedTemplate.singleton`, value from `definition.initialValue ?? schemaType.initialValue` — instead of the plain per-type template (unless the type opts in with `allowNonSingletonDocuments`), and **removes tagged templates from every "create new" surface** (global create menu, structure panes, reference inputs). The tagged template stays in `source.templates`, so opening the singleton before it exists still applies its initial value.
 2. **Injects `context.singleton`** (the definition id) into document-scoped configuration contexts — `document.actions`, `badges`, `inspectors`, field actions, `comments.enabled`, `askToEdit.enabled` — looked up by _published_ document id, so drafts and release versions of the singleton match, however the document was opened (structure, intent, deep link, search).
 3. **Filters the `duplicate` document action**, after all user resolvers run, so it cannot be reintroduced via `document.actions`.
-4. **Hides the schema type from the implicit default content list** in Structure Tool, and **appends the singleton itself to that list** — one item per definition, after the document type lists, in registration order, each equivalent to `S.listItem().singleton(id)`. A studio that has not configured Structure Tool needs no structure code at all. This applies only to the default structure; a `structure` resolver replaces it wholesale.
+4. **Hides the schema type from the implicit default content list** in Structure Tool (unless it opts in with `allowNonSingletonDocuments`), and **appends the singleton itself to that list** — one item per definition, after the document type lists, in registration order, each equivalent to `S.listItem().singleton(id)`. A studio that has not configured Structure Tool needs no structure code at all. This applies only to the default structure; a `structure` resolver replaces it wholesale.
 
 What Studio deliberately does **not** do:
 
@@ -87,7 +87,7 @@ What Studio deliberately does **not** do:
 
 In a **custom structure** (any studio passing a `structure` resolver to `structureTool()`), add them explicitly. All helpers are keyed by **definition id** and throw a `SerializeError` for unknown ids.
 
-Watch for this trap: `S.documentTypeListItems()`, the usual way to reproduce the default lists inside a custom structure, excludes singleton schema types and does **not** add singleton items. `S.list().items([...S.documentTypeListItems()])` therefore drops every singleton. Use `.singletons()` alongside it:
+Watch for this trap: `S.documentTypeListItems()`, the usual way to reproduce the default lists inside a custom structure, excludes singleton schema types (except those opted in with `allowNonSingletonDocuments`) and does **not** add singleton items. `S.list().items([...S.documentTypeListItems()])` therefore drops every singleton. Use `.singletons()` alongside it:
 
 ```ts
 S.list().id('__root__').title('Content').items(S.documentTypeListItems()).singletons()
@@ -114,9 +114,33 @@ Composition rules:
 - **`singletons()` with no argument means every registered definition** (registration order, including plugin-registered ones); `singletons([])` means none. Combining it with a hand-written `S.listItem().singleton(id)` in the same list adds that singleton twice and fails with a duplicate-id `SerializeError` — pass an explicit array when mixing.
 - **`S.documentListItem().singleton(id)`** renders a live document preview instead of a static title, and defaults its id to the definition's `documentId` (not the definition id), because a document list item's id _is_ the document it previews. Prefer plain `S.listItem()` when the singleton document may not exist yet.
 
-## Shared schema types and the "create new" escape hatch
+## Shared schema types: `allowNonSingletonDocuments`
 
-Declaring a singleton over schema type `T` replaces `T`'s plain per-type template with the singleton's tagged template, so `T` disappears from create menus. If ordinary `T` documents should stay creatable, define an explicit untagged template — any id works, including `T` itself, since the plain template no longer exists:
+**The rule:** registering a singleton over schema type `T` replaces `T`'s plain "create new" template with the singleton's tagged template, and hides `T`'s list from the default structure. Ordinary `T` documents are therefore **no longer creatable or listed** unless you opt back in. A type used _only_ by its singletons needs nothing more; a type that also backs ordinary documents does.
+
+**Recommended (Studio versions that include `allowNonSingletonDocuments`):** set the option on the singleton definition. It is not in `sanity` 6.22.0 or earlier — confirm the installed version has it by checking that the `SingletonDefinition` type exposes `allowNonSingletonDocuments`.
+
+```ts
+document: {
+  singletons: [
+    'settings',
+    {documentId: 'spring', schemaType: 'campaign', allowNonSingletonDocuments: true},
+    {documentId: 'summer', schemaType: 'campaign', allowNonSingletonDocuments: true},
+  ],
+}
+// defineSingleton({documentId: 'spring', schemaType: 'campaign', allowNonSingletonDocuments: true}) works the same.
+```
+
+With the option on (default `false`), `campaign`:
+
+- **keeps its default "create new" template**, so it stays in create menus;
+- **keeps its default list item** in `S.documentTypeListItems()` and the default structure — the list shows every `campaign` document, singletons included.
+
+So neither a hand-written untagged template nor an explicit `S.documentTypeListItem('campaign')` is needed. The singleton documents themselves still cannot be created as new documents or duplicated. When several singletons share a schema type, setting the option on **any one** of them is enough (setting it on all of them, as above, is harmless and self-documenting).
+
+**Id collision:** with the option on, the type keeps its own list item in the default content list, keyed by the type name. A singleton whose `id` (which defaults to `documentId`) equals the schema type name is therefore rejected with "Singleton definition ids collide with document type names". Give such a singleton a different `id` or `documentId`.
+
+**Fallback for Studio versions without the option:** opt back in by hand. Define an explicit untagged template — any id works, including `T` itself, since the plain template no longer exists:
 
 ```ts
 schema: {
@@ -127,7 +151,7 @@ schema: {
 },
 ```
 
-This is the one place the default structure is not enough on its own: it surfaces the singletons over the shared type, but the type stays filtered, so ordinary documents of it remain unlisted while the structure _looks_ complete. A shared schema type always needs an explicit `S.documentTypeListItem(typeName)` somewhere in the structure. (A future `allowNonSingletonDocuments` flag on the definition will replace both the escape-hatch template and this structure entry.)
+and add an explicit `S.documentTypeListItem(typeName)` to a custom structure. The default structure is not enough on its own here: it surfaces the singletons over the shared type, but the type stays filtered, so ordinary documents of it remain unlisted while the structure _looks_ complete. When upgrading to a Studio with the option, replace both with `allowNonSingletonDocuments: true`.
 
 The `singleton` tag carries the semantics: templates with it are never create options; templates without it always are. The tag lives on `ResolvedTemplate` — the resolved shape in `source.templates` — not on the authoring `Template` type, so developers never set it directly. To customise a singleton's initial value via `schema.templates`, find the singleton's template by id (equal to the definition id) and spread it (`{...template, value}`) — the spread preserves the tag at runtime, keeping it out of create menus. (Setting `initialValue` on the definition itself is usually simpler.)
 
@@ -151,19 +175,19 @@ Migration steps:
 1. Add the singleton to `document.singletons` (string shorthand when id, document id, and type name are all identical).
 2. Delete the manual `newDocumentOptions` and `duplicate` filtering for that type.
 3. Replace the manual structure wiring with `S.listItem().singleton(id)` (or keep the manual wiring — it remains fully supported; ensure the `documentId`/`schemaType` pair matches the definition so `context.singleton` resolves). If the only reason a custom structure existed was to surface the singletons, delete the resolver entirely and let the default structure do it.
-4. If the schema type is _only_ used by the singleton, nothing else changes. If it's shared with ordinary documents, add an explicit untagged template to keep them creatable, and `S.documentTypeList(typeName)` to keep them listed.
+4. If the schema type is _only_ used by the singleton, nothing else changes. If it's shared with ordinary documents, set `allowNonSingletonDocuments: true` on the singleton definition to keep them creatable and listed (Studio versions that include the option — see [Shared schema types](#shared-schema-types-allownonsingletondocuments)). On versions without it, add an explicit untagged template and `S.documentTypeListItem(typeName)` instead.
 
 ## Migrating from `sanity-plugin-singleton-management`
 
 [`sanity-plugin-singleton-management`](https://github.com/rcmaples/sanity-plugin-singleton-management) (a maintained fork of `sanity-plugin-singleton-tools`, with an identical API) marks schema types with `options: {singleton: true}`, registers a `singletonTools()` plugin that filters new-document options and document actions, and ships three structure helpers. Every piece maps directly onto the first-class API:
 
-| Plugin technique                                                 | First-class replacement                                                                                        |
-| ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `options: {singleton: true}` on the schema type                  | A `document.singletons` entry (delete the schema option — it has no first-class meaning)                       |
-| `singletonTools()` plugin in `plugins: [...]`                    | Delete (creation and duplicate prevention are automatic)                                                       |
-| `singletonDocumentListItem({S, context, type, title, id, icon})` | `S.listItem().singleton(<definition id>)` (title/icon defaults come from the definition, then the schema type) |
-| `singletonDocumentListItems({S, context})`                       | `S.list().singletons()` (or nothing at all, if using the default structure)                                    |
-| `filteredDocumentListItems({S, context})`                        | `...S.documentTypeListItems()` — singleton schema types are excluded automatically                             |
+| Plugin technique                                                 | First-class replacement                                                                                                               |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `options: {singleton: true}` on the schema type                  | A `document.singletons` entry (delete the schema option — it has no first-class meaning)                                              |
+| `singletonTools()` plugin in `plugins: [...]`                    | Delete (creation and duplicate prevention are automatic)                                                                              |
+| `singletonDocumentListItem({S, context, type, title, id, icon})` | `S.listItem().singleton(<definition id>)` (title/icon defaults come from the definition, then the schema type)                        |
+| `singletonDocumentListItems({S, context})`                       | `S.list().singletons()` (or nothing at all, if using the default structure)                                                           |
+| `filteredDocumentListItems({S, context})`                        | `...S.documentTypeListItems()` — singleton schema types are excluded automatically (unless opted in via `allowNonSingletonDocuments`) |
 
 **Document id compatibility (the critical detail):** the plugin's document id defaults to the schema type name (`S.document().schemaType(type).id(id ?? type)`), so a plugin singleton `mySingleton` edits the document `mySingleton`. The string shorthand (`singletons: ['mySingleton']`) produces exactly that document id — existing content keeps working with no data migration. If the plugin call passed an explicit `id`, carry it over as the definition's `documentId`.
 
@@ -196,4 +220,4 @@ Source lives in the [`sanity-io/sanity`](https://github.com/sanity-io/sanity) mo
 - Config types & validation: [`core/config/types.ts`](https://github.com/sanity-io/sanity/blob/main/packages/sanity/src/core/config/types.ts), [`core/config/prepareConfig.tsx`](https://github.com/sanity-io/sanity/blob/main/packages/sanity/src/core/config/prepareConfig.tsx)
 - Structure helpers: [`Document.ts`](https://github.com/sanity-io/sanity/blob/main/packages/sanity/src/structure/structureBuilder/Document.ts), [`ListItem.ts`](https://github.com/sanity-io/sanity/blob/main/packages/sanity/src/structure/structureBuilder/ListItem.ts), [`List.ts`](https://github.com/sanity-io/sanity/blob/main/packages/sanity/src/structure/structureBuilder/List.ts)
 - Working example: [`dev/test-studio/schema/singletons.ts`](https://github.com/sanity-io/sanity/blob/main/dev/test-studio/schema/singletons.ts), [`dev/test-studio/structure/resolveSingletons.ts`](https://github.com/sanity-io/sanity/blob/main/dev/test-studio/structure/resolveSingletons.ts), [`dev/test-studio/structure/resolveStructure.ts`](https://github.com/sanity-io/sanity/blob/main/dev/test-studio/structure/resolveStructure.ts)
-- Worked migration of userland singletons over _shared_ schema types (escape-hatch templates in [`dev/test-studio/initialValueTemplates/index.ts`](https://github.com/sanity-io/sanity/blob/main/dev/test-studio/initialValueTemplates/index.ts), explicit `S.documentTypeListItem()` opt-back-ins): the `circular`, `grrm`, and `jrr-tolkien` definitions in `resolveSingletons.ts`
+- Worked migration of userland singletons over _shared_ schema types (the manual fallback for Studios without `allowNonSingletonDocuments`: escape-hatch templates in [`dev/test-studio/initialValueTemplates/index.ts`](https://github.com/sanity-io/sanity/blob/main/dev/test-studio/initialValueTemplates/index.ts), explicit `S.documentTypeListItem()` opt-back-ins): the `circular`, `grrm`, and `jrr-tolkien` definitions in `resolveSingletons.ts`
