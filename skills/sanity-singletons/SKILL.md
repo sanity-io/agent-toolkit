@@ -118,7 +118,7 @@ Composition rules:
 
 **The rule:** registering a singleton over schema type `T` replaces `T`'s plain "create new" template with the singleton's tagged template, and hides `T`'s list from the default structure. Ordinary `T` documents are therefore **no longer creatable or listed** unless you opt back in. A type used _only_ by its singletons needs nothing more; a type that also backs ordinary documents does.
 
-**Recommended (Studio versions that include `allowNonSingletonDocuments`):** set the option on the singleton definition. It is not in `sanity` 6.22.0 or earlier — confirm the installed version has it by checking that the `SingletonDefinition` type exposes `allowNonSingletonDocuments`.
+**Recommended (`sanity` 6.24.0 or later):** set the option on the singleton definition. It was added in `sanity` 6.24.0 and is not in 6.23.0 or earlier — check the installed version in the lockfile before using it.
 
 ```ts
 document: {
@@ -140,7 +140,7 @@ So neither a hand-written untagged template nor an explicit `S.documentTypeListI
 
 **Id collision:** with the option on, the type keeps its own list item in the default content list, keyed by the type name. A singleton whose `id` (which defaults to `documentId`) equals the schema type name is therefore rejected with "Singleton definition ids collide with document type names". Give such a singleton a different `id` or `documentId`.
 
-**Fallback for Studio versions without the option:** opt back in by hand. Define an explicit untagged template — any id works, including `T` itself, since the plain template no longer exists:
+**Fallback for `sanity` 6.23.0 and earlier:** opt back in by hand. Define an explicit untagged template — any id works, including `T` itself, since the plain template no longer exists:
 
 ```ts
 schema: {
@@ -151,7 +151,7 @@ schema: {
 },
 ```
 
-and add an explicit `S.documentTypeListItem(typeName)` to a custom structure. The default structure is not enough on its own here: it surfaces the singletons over the shared type, but the type stays filtered, so ordinary documents of it remain unlisted while the structure _looks_ complete. When upgrading to a Studio with the option, replace both with `allowNonSingletonDocuments: true`.
+and add an explicit `S.documentTypeListItem(typeName)` to a custom structure. The default structure is not enough on its own here: it surfaces the singletons over the shared type, but the type stays filtered, so ordinary documents of it remain unlisted while the structure _looks_ complete. When upgrading to 6.24.0 or later, replace both with `allowNonSingletonDocuments: true`.
 
 The `singleton` tag carries the semantics: templates with it are never create options; templates without it always are. The tag lives on `ResolvedTemplate` — the resolved shape in `source.templates` — not on the authoring `Template` type, so developers never set it directly. To customise a singleton's initial value via `schema.templates`, find the singleton's template by id (equal to the definition id) and spread it (`{...template, value}`) — the spread preserves the tag at runtime, keeping it out of create menus. (Setting `initialValue` on the definition itself is usually simpler.)
 
@@ -175,7 +175,7 @@ Migration steps:
 1. Add the singleton to `document.singletons` (string shorthand when id, document id, and type name are all identical).
 2. Delete the manual `newDocumentOptions` and `duplicate` filtering for that type.
 3. Replace the manual structure wiring with `S.listItem().singleton(id)` (or keep the manual wiring — it remains fully supported; ensure the `documentId`/`schemaType` pair matches the definition so `context.singleton` resolves). If the only reason a custom structure existed was to surface the singletons, delete the resolver entirely and let the default structure do it.
-4. If the schema type is _only_ used by the singleton, nothing else changes. If it's shared with ordinary documents, set `allowNonSingletonDocuments: true` on the singleton definition to keep them creatable and listed (Studio versions that include the option — see [Shared schema types](#shared-schema-types-allownonsingletondocuments)). On versions without it, add an explicit untagged template and `S.documentTypeListItem(typeName)` instead.
+4. If the schema type is _only_ used by the singleton, nothing else changes. If it's shared with ordinary documents, set `allowNonSingletonDocuments: true` on the singleton definition to keep them creatable and listed (`sanity` 6.24.0 or later — see [Shared schema types](#shared-schema-types-allownonsingletondocuments)). On 6.23.0 and earlier, add an explicit untagged template and `S.documentTypeListItem(typeName)` instead.
 
 ## Migrating from `sanity-plugin-singleton-management`
 
@@ -220,4 +220,4 @@ Source lives in the [`sanity-io/sanity`](https://github.com/sanity-io/sanity) mo
 - Config types & validation: [`core/config/types.ts`](https://github.com/sanity-io/sanity/blob/main/packages/sanity/src/core/config/types.ts), [`core/config/prepareConfig.tsx`](https://github.com/sanity-io/sanity/blob/main/packages/sanity/src/core/config/prepareConfig.tsx)
 - Structure helpers: [`Document.ts`](https://github.com/sanity-io/sanity/blob/main/packages/sanity/src/structure/structureBuilder/Document.ts), [`ListItem.ts`](https://github.com/sanity-io/sanity/blob/main/packages/sanity/src/structure/structureBuilder/ListItem.ts), [`List.ts`](https://github.com/sanity-io/sanity/blob/main/packages/sanity/src/structure/structureBuilder/List.ts)
 - Working example: [`dev/test-studio/schema/singletons.ts`](https://github.com/sanity-io/sanity/blob/main/dev/test-studio/schema/singletons.ts), [`dev/test-studio/structure/resolveSingletons.ts`](https://github.com/sanity-io/sanity/blob/main/dev/test-studio/structure/resolveSingletons.ts), [`dev/test-studio/structure/resolveStructure.ts`](https://github.com/sanity-io/sanity/blob/main/dev/test-studio/structure/resolveStructure.ts)
-- Worked migration of userland singletons over _shared_ schema types (the manual fallback for Studios without `allowNonSingletonDocuments`: escape-hatch templates in [`dev/test-studio/initialValueTemplates/index.ts`](https://github.com/sanity-io/sanity/blob/main/dev/test-studio/initialValueTemplates/index.ts), explicit `S.documentTypeListItem()` opt-back-ins): the `circular`, `grrm`, and `jrr-tolkien` definitions in `resolveSingletons.ts`
+- Worked migration of userland singletons over _shared_ schema types (the manual fallback for Studios before 6.24.0, which lack `allowNonSingletonDocuments`: escape-hatch templates in [`dev/test-studio/initialValueTemplates/index.ts`](https://github.com/sanity-io/sanity/blob/main/dev/test-studio/initialValueTemplates/index.ts), explicit `S.documentTypeListItem()` opt-back-ins): the `circular`, `grrm`, and `jrr-tolkien` definitions in `resolveSingletons.ts`
