@@ -1,6 +1,6 @@
 ---
 title: Angular & Sanity Integration Rules
-description: Integration guide for Angular, including @sanity/client setup, data fetching with signals and resource API, Portable Text rendering, and image optimization.
+description: Integration guide for Angular, including @sanity/client setup, data fetching with signals and resource API, Portable Text rendering, image optimization, and Visual Editing.
 ---
 
 # Angular & Sanity Integration Rules
@@ -592,7 +592,9 @@ export class SanityService {
   readonly refresh$ = this.refreshSubject.asObservable()
 
   readonly previewMode =
-    Boolean(environment.preview.token) && (window.self !== window.top || Boolean(window.opener))
+    isPlatformBrowser(inject(PLATFORM_ID)) &&
+    Boolean(environment.preview.token) &&
+    (window.self !== window.top || Boolean(window.opener))
 
   private client = createClient(
     this.previewMode
@@ -611,11 +613,14 @@ export class SanityService {
   }
 
   setPerspective(perspective: ClientPerspective) {
+    if (JSON.stringify(perspective) === JSON.stringify(this.client.config().perspective)) return
     this.client = this.client.withConfig({perspective})
     this.refresh()
   }
 }
 ```
+
+The `isPlatformBrowser` check keeps SSR from touching `window`. Add the app's origin as a CORS origin with credentials allowed (`npx sanity cors add http://localhost:4200 --credentials`), or the token-authenticated requests fail.
 
 Components subscribe to `refresh$` with `takeUntilDestroyed()` and call their resource's `reload()`. Stega-encoded strings must be cleaned before logic or comparisons, see `visual-editing.md`.
 
