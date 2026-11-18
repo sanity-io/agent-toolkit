@@ -47,6 +47,10 @@ export const environment = {
     dataset: 'production',
     apiVersion: '2025-05-01',
   },
+  preview: {
+    token: '',
+    studioUrl: 'http://localhost:3333',
+  },
 }
 ```
 
@@ -59,8 +63,14 @@ export const environment = {
     dataset: 'production',
     apiVersion: '2025-05-01',
   },
+  preview: {
+    token: '',
+    studioUrl: 'https://your-studio.sanity.studio',
+  },
 }
 ```
+
+The template's `setEnvVars.ts` generates these files and fills `preview.token` from `SANITY_API_READ_TOKEN` and `preview.studioUrl` from `SANITY_STUDIO_URL`. With static files, paste a viewer token into the development file locally and leave it empty in production, since an empty token keeps preview mode off.
 
 > There is no Angular-specific Sanity SDK. Use `@sanity/client` directly, wrapped in an Angular service.
 
@@ -536,6 +546,13 @@ Add the overlay stylesheet as a bundle that is not injected into `index.html`, s
 Provide an environment initializer that does nothing outside preview mode. In preview it adds `visual-editing.css`, calls `enableVisualEditing` with a Router-backed `history` adapter and a `refresh` handler, and disables the overlays on destroy:
 
 ```typescript
+import { DOCUMENT, Location } from '@angular/common'
+import { DestroyRef, EnvironmentProviders, inject, provideEnvironmentInitializer } from '@angular/core'
+import { NavigationEnd, Router } from '@angular/router'
+import { enableVisualEditing } from '@sanity/visual-editing-standalone'
+import { filter } from 'rxjs'
+import { SanityService } from './sanity.service'
+
 export function provideVisualEditing(): EnvironmentProviders {
   return provideEnvironmentInitializer(() => {
     const sanity = inject(SanityService)
@@ -586,6 +603,12 @@ Register it in `app.config.ts` with `provideVisualEditing()`.
 Turn preview on only when the app is loaded inside Presentation (in its iframe or a popup it opened) and a viewer token is configured. In preview, fetch drafts with stega, and follow `onPerspectiveChange` so the Studio's perspective picker works:
 
 ```typescript
+import { Injectable, inject, PLATFORM_ID } from '@angular/core'
+import { isPlatformBrowser } from '@angular/common'
+import { createClient, type ClientPerspective } from '@sanity/client'
+import { Subject } from 'rxjs'
+import { environment } from '../environments/environment'
+
 @Injectable({providedIn: 'root'})
 export class SanityService {
   private readonly refreshSubject = new Subject<void>()
@@ -629,6 +652,9 @@ Components subscribe to `refresh$` with `takeUntilDestroyed()` and call their re
 Stega cannot reach images, numbers or booleans. Mark those elements with `createDataAttribute` and bind the result to `data-sanity`:
 
 ```typescript
+import { createDataAttribute } from '@sanity/visual-editing-standalone'
+import { environment } from '../environments/environment'
+
 dataAttribute(document: Post, path: string): string | null {
   if (!this.previewMode) return null
   return createDataAttribute({
@@ -649,6 +675,8 @@ dataAttribute(document: Post, path: string): string | null {
 Add `presentationTool` with the preview URL, `mainDocuments` to open the document for a route, and `locations` to link documents back to the pages that use them:
 
 ```typescript
+import { defineDocuments, defineLocations, presentationTool } from 'sanity/presentation'
+
 presentationTool({
   previewUrl: process.env.SANITY_STUDIO_PREVIEW_URL || 'http://localhost:4200',
   resolve: {
