@@ -545,6 +545,7 @@ Once setup is complete, let the user know:
 - **Studio Structure** — Customize the Studio sidebar (`studio-structure.md`)
 - **SEO** — Metadata, sitemaps, and Open Graph (`seo.md`)
 - **i18n** — Multi-language content (`localization.md`)
+- **Functions** — Run code when content changes or on a schedule (`functions.md`)
 
 Just ask about any of these!"
 
