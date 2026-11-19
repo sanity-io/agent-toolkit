@@ -1,6 +1,6 @@
 ---
 title: Angular & Sanity Integration Rules
-description: Integration guide for Angular, including @sanity/client setup, data fetching with signals and resource API, Portable Text rendering, and image optimization.
+description: Integration guide for Angular, including @sanity/client setup, data fetching with signals and resource API, Portable Text rendering, image optimization, and Visual Editing.
 ---
 
 # Angular & Sanity Integration Rules
@@ -47,6 +47,10 @@ export const environment = {
     dataset: 'production',
     apiVersion: '2025-05-01',
   },
+  preview: {
+    token: '',
+    studioUrl: 'http://localhost:3333',
+  },
 }
 ```
 
@@ -59,8 +63,14 @@ export const environment = {
     dataset: 'production',
     apiVersion: '2025-05-01',
   },
+  preview: {
+    token: '',
+    studioUrl: 'https://your-studio.sanity.studio',
+  },
 }
 ```
+
+The template's `setEnvVars.ts` generates these files and fills `preview.token` from `SANITY_API_READ_TOKEN` and `preview.studioUrl` from `SANITY_STUDIO_URL`. With static files, paste a viewer token into the development file locally and leave it empty in production, since an empty token keeps preview mode off.
 
 > There is no Angular-specific Sanity SDK. Use `@sanity/client` directly, wrapped in an Angular service.
 
@@ -120,7 +130,7 @@ export class SanityService {
 }
 ```
 
-For preview/draft content, create a second client instance with a token and `useCdn: false`. Never expose tokens in client-side bundles — use server-side rendering or a proxy endpoint for authenticated requests.
+For preview/draft content, create a second client instance with a token and `useCdn: false`. Only bundle a viewer token into browser JavaScript for local development or a private preview deployment; for production preview use server-side rendering or a proxy endpoint. See [9. Visual Editing](#9-visual-editing).
 
 ## 3. Data Fetching Patterns
 
@@ -510,45 +520,187 @@ export const serverRoutes: ServerRoute[] = [
 
 ## 9. Visual Editing
 
-> **Important:** Angular does not have official Sanity Visual Editing support. There is no `@sanity/visual-editing` integration, no Stega encoding, and no click-to-edit overlay for Angular applications. This is unlike Next.js, Nuxt, and SvelteKit which have first-party support.
+Angular uses `@sanity/visual-editing-standalone`, a framework-neutral build of Visual Editing that bundles its own React runtime. Reference implementation: [`sanity-template-angular-clean`](https://github.com/sanity-io/sanity-template-angular-clean).
 
-### Preview Mode (Basic)
+```bash
+npm install @sanity/visual-editing-standalone
+```
 
-For draft content preview, create a separate preview client with an API token:
+### Stylesheet
+
+Add the overlay stylesheet as a bundle that is not injected into `index.html`, so it only loads when Visual Editing is on:
+
+```json
+"styles": [
+  "src/styles.css",
+  {
+    "input": "@sanity/visual-editing-standalone/styles.css",
+    "bundleName": "visual-editing",
+    "inject": false
+  }
+]
+```
+
+### Enable overlays
+
+Provide an environment initializer that does nothing outside preview mode. In preview it adds `visual-editing.css`, calls `enableVisualEditing` with a Router-backed `history` adapter and a `refresh` handler, and disables the overlays on destroy:
 
 ```typescript
-@Injectable({ providedIn: 'root' })
+import { DOCUMENT, Location } from '@angular/common'
+import { DestroyRef, EnvironmentProviders, inject, provideEnvironmentInitializer } from '@angular/core'
+import { NavigationEnd, Router } from '@angular/router'
+import { enableVisualEditing } from '@sanity/visual-editing-standalone'
+import { filter } from 'rxjs'
+import { SanityService } from './sanity.service'
+
+export function provideVisualEditing(): EnvironmentProviders {
+  return provideEnvironmentInitializer(() => {
+    const sanity = inject(SanityService)
+    if (!sanity.previewMode) return
+
+    const router = inject(Router)
+    const location = inject(Location)
+    const document = inject(DOCUMENT)
+
+    const stylesheet = document.createElement('link')
+    stylesheet.rel = 'stylesheet'
+    stylesheet.href = 'visual-editing.css'
+    document.head.appendChild(stylesheet)
+
+    const disableVisualEditing = enableVisualEditing({
+      history: {
+        subscribe: (navigate) => {
+          navigate({type: 'push', url: router.url})
+          const subscription = router.events
+            .pipe(filter((event) => event instanceof NavigationEnd))
+            .subscribe((event) => navigate({type: 'push', url: event.urlAfterRedirects}))
+          return () => subscription.unsubscribe()
+        },
+        update: (update) => {
+          const url = new URL(update.url, document.baseURI)
+          const path = url.pathname + url.search + url.hash
+          if (update.type === 'push') router.navigateByUrl(path)
+          if (update.type === 'replace') router.navigateByUrl(path, {replaceUrl: true})
+          if (update.type === 'pop') location.back()
+        },
+      },
+      refresh: async () => sanity.refresh(),
+      onPerspectiveChange: (perspective) => sanity.setPerspective(perspective),
+    })
+
+    inject(DestroyRef).onDestroy(() => {
+      disableVisualEditing()
+      stylesheet.remove()
+    })
+  })
+}
+```
+
+Register it in `app.config.ts` with `provideVisualEditing()`.
+
+### Preview client
+
+Turn preview on only when the app is loaded inside Presentation (in its iframe or a popup it opened) and a viewer token is configured. In preview, fetch drafts with stega, and follow `onPerspectiveChange` so the Studio's perspective picker works:
+
+```typescript
+import { Injectable, inject, PLATFORM_ID } from '@angular/core'
+import { isPlatformBrowser } from '@angular/common'
+import { createClient, type ClientPerspective } from '@sanity/client'
+import { Subject } from 'rxjs'
+import { environment } from '../environments/environment'
+
+@Injectable({providedIn: 'root'})
 export class SanityService {
-  private client: SanityClient
-  private previewClient: SanityClient
+  private readonly refreshSubject = new Subject<void>()
+  readonly refresh$ = this.refreshSubject.asObservable()
 
-  constructor() {
-    this.client = createClient({
-      projectId: environment.sanity.projectId,
-      dataset: environment.sanity.dataset,
-      apiVersion: environment.sanity.apiVersion,
-      useCdn: true,
-    })
+  readonly previewMode =
+    isPlatformBrowser(inject(PLATFORM_ID)) &&
+    Boolean(environment.preview.token) &&
+    (window.self !== window.top || Boolean(window.opener))
 
-    this.previewClient = this.client.withConfig({
-      useCdn: false,
-      token: environment.sanity.previewToken, // Server-side only!
-      perspective: 'drafts',
-    })
+  private client = createClient(
+    this.previewMode
+      ? {
+          ...environment.sanity,
+          useCdn: false,
+          token: environment.preview.token,
+          perspective: 'drafts',
+          stega: {enabled: true, studioUrl: environment.preview.studioUrl},
+        }
+      : environment.sanity,
+  )
+
+  refresh() {
+    this.refreshSubject.next()
   }
 
-  fetch<Query extends string>(query: Query, params?: QueryParams, preview = false): Promise<ClientReturn<Query>> {
-    const client = preview ? this.previewClient : this.client
-    return client.fetch(query, params)
+  setPerspective(perspective: ClientPerspective) {
+    if (JSON.stringify(perspective) === JSON.stringify(this.client.config().perspective)) return
+    this.client = this.client.withConfig({perspective})
+    this.refresh()
   }
 }
 ```
 
-> **Security:** Never expose the preview token in client-side bundles. Use this pattern only with SSR where the token stays on the server, or proxy preview requests through a backend API.
+The `isPlatformBrowser` check keeps SSR from touching `window`. Add the app's origin as a CORS origin with credentials allowed (`npx sanity cors add http://localhost:4200 --credentials`), or the token-authenticated requests fail.
 
-### Community Visual Editing
+Components subscribe to `refresh$` with `takeUntilDestroyed()` and call their resource's `reload()`. Stega-encoded strings must be cleaned before logic or comparisons, see `visual-editing.md`.
 
-The community library `@limitless-angular/sanity` provides experimental Visual Editing support for Angular, including overlay click-to-edit functionality. Check its documentation for current status and limitations.
+### Data attributes
+
+Stega cannot reach images, numbers or booleans. Mark those elements with `createDataAttribute` and bind the result to `data-sanity`:
+
+```typescript
+import { createDataAttribute } from '@sanity/visual-editing-standalone'
+import { environment } from '../environments/environment'
+
+dataAttribute(document: Post, path: string): string | null {
+  if (!this.previewMode) return null
+  return createDataAttribute({
+    baseUrl: environment.preview.studioUrl,
+    id: document._id,
+    type: document._type,
+    path,
+  }).toString()
+}
+```
+
+```html
+<img [attr.data-sanity]="sanity.dataAttribute(post, 'mainImage')" />
+```
+
+### Studio configuration
+
+Add `presentationTool` with the preview URL, `mainDocuments` to open the document for a route, and `locations` to link documents back to the pages that use them:
+
+```typescript
+import { defineDocuments, defineLocations, presentationTool } from 'sanity/presentation'
+
+presentationTool({
+  previewUrl: process.env.SANITY_STUDIO_PREVIEW_URL || 'http://localhost:4200',
+  resolve: {
+    mainDocuments: defineDocuments([
+      {route: '/post/:slug', filter: `_type == "post" && slug.current == $slug`},
+    ]),
+    locations: {
+      post: defineLocations({
+        select: {title: 'title', slug: 'slug.current'},
+        resolve: (doc) => ({
+          locations: [
+            ...(doc?.slug ? [{title: doc.title || 'Untitled', href: `/post/${doc.slug}`}] : []),
+            {title: 'Home', href: '/'},
+          ],
+        }),
+      }),
+    },
+  },
+})
+```
+
+### Token safety
+
+The preview client above bundles the viewer token into browser JavaScript. That is acceptable only for local development or a private, access-protected preview deployment. Never set the token for a public deployment. For production preview, fetch draft content through SSR or a server-side proxy so the token stays on the server.
 
 ## 10. Error Handling
 

@@ -264,3 +264,5 @@ This pattern works for both Page Builder blocks (`pageBuilder[]`) and Portable T
 | **Svelte** | `@sanity/svelte-loader` | `createRequestHandler`, `useLiveMode`, `enableVisualEditing` |
 | **Nuxt** | `@nuxtjs/sanity` | Automatic via module config (`visualEditing: {}`) |
 | **Astro** | `@sanity/astro` | `sanity({ useCdn: false, stega: true })` |
+
+Frameworks without a first-party loader (Angular, Vue, vanilla JavaScript and other non-React environments) use `@sanity/visual-editing-standalone`, which exports `enableVisualEditing` and `createDataAttribute` and needs no React dependencies. For Angular, see `angular.md` (Section 9).

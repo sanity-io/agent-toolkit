@@ -52,7 +52,7 @@ Reference these guidelines when:
 - `get-started` - Interactive onboarding for new Sanity projects
 - `nextjs` - Next.js App Router, Live Content API, standalone Studio
 - `nuxt` - Nuxt integration with @nuxtjs/sanity
-- `angular` - Angular integration with @sanity/client, signals, resource API
+- `angular` - Angular integration with @sanity/client, signals, resource API, Visual Editing
 - `astro` - Astro integration with @sanity/astro
 - `remix` - React Router / Remix integration
 - `svelte` - SvelteKit integration with @sanity/svelte-loader
