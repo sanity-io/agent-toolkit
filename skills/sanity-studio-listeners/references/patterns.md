@@ -63,12 +63,15 @@ export function AuthorCard({id}: {id: string}) {
     () => previewStore.unstable_observeDocuments([getDraftId(id), getPublishedId(id)]),
     [previewStore, id],
   )
-  const [draft, published] = useObservable(documents$, [undefined, undefined])
-  const author: SanityDocument | undefined = draft ?? published
+  // null until the first answer; a document that doesn't exist comes back as undefined
+  const documents = useObservable(documents$, null)
+  if (!documents) return <Text>Loading…</Text>
 
+  const [draft, published] = documents
+  const author: SanityDocument | undefined = draft ?? published
   return (
     <Card padding={2} border>
-      <Text>{author ? String(author.name ?? 'Untitled') : 'Loading…'}</Text>
+      <Text>{author ? String(author.name ?? 'Untitled') : 'Not found'}</Text>
     </Card>
   )
 }
@@ -76,6 +79,33 @@ export function AuthorCard({id}: {id: string}) {
 
 Fetches for many documents are batched into one query, and every card reads through the same
 shared listener.
+
+## Validating what editors see
+
+`'global'` validation checks exactly the id it is given. To validate the draft when there is one,
+the way the document editor does, pick the id from the same shared streams:
+
+```tsx
+import {useMemo} from 'react'
+import {useObservable} from 'react-rx'
+import {getDraftId, getPublishedId, useDocumentPreviewStore} from 'sanity'
+
+export function CurrentValidationBadge({id, type}: {id: string; type: string}) {
+  const previewStore = useDocumentPreviewStore()
+  const draft$ = useMemo(
+    () => previewStore.unstable_observeDocument(getDraftId(id)),
+    [previewStore, id],
+  )
+  const draft = useObservable(draft$, undefined)
+  const targetId = draft ? getDraftId(id) : getPublishedId(id)
+
+  return <ValidationBadge key={targetId} id={targetId} type={type} />
+}
+```
+
+`ValidationBadge` is the component from the first example; render it inside the list's error
+boundary. Keying it on the target id starts a fresh validation when a draft appears or is
+published.
 
 ## A listener of your own, once per screen
 

@@ -58,11 +58,14 @@ the query.
   queries, a moment after the keystroke. That is right for lists, boards and dashboards. Keep the
   default (`'document'`) only in components rendered inside the document form, next to the editor.
 - **The id picks the version.** A published id validates the published document. If editors work
-  in drafts, pass `drafts.<id>` when a draft exists, or errors in unpublished changes won't show.
+  in drafts, pass `drafts.<id>` when a draft exists, or errors in unpublished changes won't show
+  ("Validating what editors see" in the patterns).
 - **Wrap lists in an error boundary.** The hooks retry a failed load a few times, then throw while
   rendering. One failure should show a message, not crash the tool.
-- `unstable_observeDocument` follows one exact id. To show the draft when there is one, observe
-  `[getDraftId(id), getPublishedId(id)]` together and use `draft ?? published`.
+- `unstable_observeDocument` follows one exact id and emits `undefined` when the document doesn't
+  exist, so start `useObservable` from `null` to tell loading from missing. To show the draft when
+  there is one, observe `[getDraftId(id), getPublishedId(id)]` together and use
+  `draft ?? published`.
 
 ## Rules for a listener of your own
 
