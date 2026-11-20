@@ -138,3 +138,5 @@ export const defaultDocumentNode: DefaultDocumentNodeResolver = (S, { schemaType
   }
 }
 ```
+
+> **Custom views, tools and structure that show live data:** never open a listener per document (per card, row or list item), and give structure resolvers that depend on a document a fallback when it fails to load. Listeners fill the browser's shared connection to the Sanity API and make Studio hang when editors have several tabs open. See the `sanity-studio-listeners` skill.
