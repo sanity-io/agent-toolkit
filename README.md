@@ -306,6 +306,7 @@ Best practices skills that agents like Claude Code, Cursor, GitHub Copilot, etc.
 | **content-experimentation-best-practices** | A/B testing methodology, statistical foundations, experiment design |
 | **sanity-singletons** | First-class singleton documents via `document.singletons`, Structure helpers, and migrating from userland or plugin-based singletons |
 | **sanity-form-component-suspense** | Fix custom Studio form components (inputs, fields, array items) that suspend without their own `Suspense` boundary, causing layout shift or blocking new documents |
+| **sanity-studio-listeners** | Keep custom Studio tools, inputs and views from opening a real-time listener per document, which makes Studio hang when editors have several tabs open |
 
 ### Getting started flow
 
@@ -372,7 +373,8 @@ sanity-io/agent-toolkit/
     ├── seo-aeo-best-practices/               # SEO/AEO guidance + topic references
     ├── content-experimentation-best-practices/ # Experiment design + stats references
     ├── sanity-singletons/                    # First-class singleton documents (Studio 6.17+)
-    └── sanity-form-component-suspense/       # Suspense boundaries for custom form components
+    ├── sanity-form-component-suspense/       # Suspense boundaries for custom form components
+    └── sanity-studio-listeners/              # Real-time listeners in Studio customizations
 ```
 
 All skills use `references/` for detailed content loaded on demand. The `sanity-best-practices` references are also the canonical source for the MCP server's Sanity rules.
