@@ -1,6 +1,6 @@
 ---
 name: sanity-migration
-description: Plans, implements, and reviews migrations from other CMSes and content systems into Sanity. Use when migrating or replatforming to Sanity from AEM, Adobe Experience Manager, Contentful, Strapi, Webflow, WordPress, Payload, Drupal, Markdown/MDX/frontmatter files, WXR/XML exports, CMS APIs, database dumps, static HTML, or when designing extraction, transformation, Portable Text conversion, asset migration, redirects, validation, and cutover workflows.
+description: Plans, implements, and reviews migrations from other CMSes and content systems into Sanity. Use when migrating or replatforming to Sanity from AEM, Adobe Experience Manager, Contentful, Episerver, Optimizely CMS, Strapi, Webflow, WordPress, Payload, Drupal, Markdown/MDX/frontmatter files, WXR/XML exports, CMS APIs, database dumps, static HTML, or when designing extraction, transformation, Portable Text conversion, asset migration, redirects, validation, and cutover workflows.
 ---
 
 # Sanity Migration
@@ -13,6 +13,7 @@ Use this skill for CMS-to-Sanity migration work. Treat migration as a content st
 2. If the source platform is known, also read its guide:
    - AEM / Adobe Experience Manager: `references/aem.md`
    - Contentful: `references/contentful.md`
+   - Episerver / Optimizely CMS: `references/episerver.md`
    - Strapi: `references/strapi.md`
    - Webflow: `references/webflow.md`
    - WordPress / WXR / Elementor: `references/wordpress.md`
