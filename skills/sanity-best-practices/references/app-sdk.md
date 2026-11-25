@@ -5,7 +5,7 @@ description: Rules for building custom applications with the Sanity App SDK, inc
 
 # Sanity App SDK
 
-Build custom React applications that interact with Sanity content in real-time.
+Build custom React applications that interact with Sanity content in real-time. For what the SDK covers and how apps run in the Dashboard, read https://www.sanity.io/docs/app-sdk/sdk-introduction.md.
 
 **If `sanity.cli.ts` uses `defineApplication`, also load the `dashboard` rule.** It covers config, local development, deploys, and Dashboard hooks for apps in the Sanity Dashboard beta, and takes precedence over the Configuration and Commands sections below.
 
@@ -17,6 +17,8 @@ Build custom React applications that interact with Sanity content in real-time.
 - **Runtime:** Node.js 22.12+ (required by the current Sanity CLI)
 
 ## Commands
+
+For a step-by-step first app, read https://www.sanity.io/docs/app-sdk/sdk-quickstart.md.
 
 ```bash
 # Basic quickstart (add --dashboard for the Dashboard beta, see the `dashboard` rule)
@@ -65,7 +67,7 @@ my-app/
 
 ### CLI Config (`sanity.cli.ts`)
 
-The classic app config, without `defineApplication`. For Dashboard beta apps and for `app.visibility`, see the `dashboard` rule.
+The classic app config, without `defineApplication`. For Dashboard beta apps and for `app.visibility`, see the `dashboard` rule. For every `sanity.cli.ts` and `SanityConfig` option, read https://www.sanity.io/docs/app-sdk/sdk-configuration.md.
 
 ```typescript
 import { defineCliConfig } from 'sanity/cli'
@@ -144,7 +146,7 @@ Access: `process.env.SANITY_APP_PROJECT_ID`
 
 ## Document Handles
 
-Lightweight references to documents. Fetch handles first, then load content as needed.
+Lightweight references to documents. Fetch handles first, then load content as needed. Details: https://www.sanity.io/docs/app-sdk/document-handles.md
 
 ```typescript
 interface DocumentHandle {
@@ -186,6 +188,8 @@ const handle = {
 | `useDocument` | Single document, real-time editing | Full document or field |
 | `useDocumentProjection` | Specific fields, display only | Projected data |
 | `useQuery` | Complex GROQ queries (use sparingly) | Raw query results |
+
+For the other hooks and their options, read https://www.sanity.io/docs/app-sdk/sdk-react-hooks.md. For a worked list, preview, and edit example, read https://www.sanity.io/docs/app-sdk/fetching-and-handling-content.md.
 
 ---
 

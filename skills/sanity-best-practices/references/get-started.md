@@ -151,6 +151,7 @@ Keep its output private.
 **If Studio exists:**
 - Read the config to get `projectId` and `dataset`
 - If `sanity.cli.ts` uses `defineApplication`, it runs in the Sanity Dashboard; load the `dashboard` rule before running `dev` or `deploy`
+- Otherwise, if the user wants the Studio in the Sanity Dashboard (or it is self-hosted or embedded and missing from it), follow the Classic Studios section of the `dashboard` rule
 - Proceed to Step 2
 
 ### Step 2: Check for Existing Schema
