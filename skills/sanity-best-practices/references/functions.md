@@ -31,7 +31,7 @@ Serverless event handlers hosted on Sanity's infrastructure, configured via **Bl
 
 | Dependency | Version |
 |:---|:---|
-| Node.js | v24.x (matches deployed runtime) |
+| Node.js | v26.x (matches deployed runtime) |
 | Sanity CLI | v4.12.0+ |
 | `@sanity/blueprints` | Latest |
 | `@sanity/functions` | Latest |
@@ -218,7 +218,7 @@ When testing locally, `context.clientOptions` only has `projectId` and `apiHost`
 | `src` | `string` | `functions/<name>` | Path to function source directory |
 | `memory` | `number` | `1` | Memory in GB (max 10) |
 | `timeout` | `number` | `10` | Timeout in seconds (max 900) |
-| `runtime` | `string` | `'nodejs24.x'` | `'node'`, `'nodejs22.x'`, or `'nodejs24.x'` |
+| `runtime` | `string` | `'nodejs26.x'` | `'node'`, `'nodejs22.x'`, `'nodejs24.x'`, or `'nodejs26.x'` |
 | `project` | `string` | — | Project ID. Required if blueprint is org-scoped. |
 | `robotToken` | `string` | — | Custom robot token name for the function |
 | `event` | `object` | required | Event configuration (see below) |
