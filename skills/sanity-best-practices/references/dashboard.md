@@ -7,6 +7,8 @@ description: Rules for Studios and App SDK apps that run in the Sanity Dashboard
 
 The Sanity Dashboard is where an organization's Studios and App SDK apps run. A Studio or app opts into the Dashboard beta by declaring itself with `defineApplication` in `sanity.cli.ts`. That changes how it is created, developed, and deployed. For SDK data hooks (`useDocuments`, `useDocument`, and so on), see the `app-sdk` rule.
 
+For what the Dashboard is and how an organization uses it, read https://www.sanity.io/docs/dashboard/dashboard-introduction.md.
+
 ## Detect the Setup
 
 Read `sanity.cli.ts` before running `dev` or `deploy`:
@@ -97,11 +99,13 @@ export default defineCliConfig({
 - `default` — listed in the sidebar (the default when omitted).
 - `unlisted` — hidden from the sidebar but still opens via a direct link. **Not private:** anyone with the link can open it.
 
+For a classic app's `app.visibility`, `app.title`, and `app.icon`, read https://www.sanity.io/docs/app-sdk/sdk-configuration.md.
+
 ## Develop
 
 `npm run dev` (`sanity dev`) starts a local Dashboard on the configured port (3333 by default) and serves the Studio or app on the next port (3334), loaded into that Dashboard. Open the Dashboard URL the CLI prints, not the app port.
 
-The Dashboard needs a signed-in Sanity account, so a human must complete sign-in in the browser. `--load-in-dashboard` is ignored; a Dashboard app already runs in the local Dashboard.
+The Dashboard needs a signed-in Sanity account, so a human must complete sign-in in the browser. `--load-in-dashboard` is ignored; a Dashboard app already runs in the local Dashboard. Flags: https://www.sanity.io/docs/cli-reference/dev.md
 
 ## Deploy
 
@@ -120,11 +124,13 @@ npm run deploy -- --yes --json
 - A Studio also needs `api.projectId`. `studioHost` and `--url` do not apply; the address comes from `slug`.
 - Agent terminals may disable prompts (`TERM=dumb`). Use these flags rather than changing terminal settings.
 
+For every `sanity deploy` flag, read https://www.sanity.io/docs/cli-reference/deploy.md. For classic App SDK deploys and the organization token CI needs, read https://www.sanity.io/docs/app-sdk/sdk-deployment.md.
+
 Deployed apps are served at `https://<organizationId>.sanity.run/applications/<appId>` and Studios at `https://<organizationId>.sanity.run/studios/<appId>`.
 
 ## Classic Studios
 
-A Studio without `defineApplication` shows up in the Dashboard once it is deployed or registered with the CLI. Use the latest `sanity` release; schema deployment needs v3.88.0+.
+A Studio without `defineApplication` shows up in the Dashboard once it is deployed or registered with the CLI. Use the latest `sanity` release; schema deployment needs v3.88.0+. Before registering a self-hosted or embedded Studio, read https://www.sanity.io/docs/dashboard/dashboard-configure.md. For hosting options and CI flags, read https://www.sanity.io/docs/studio/deployment.md.
 
 ```bash
 # Develop: open the local Studio inside the Dashboard
