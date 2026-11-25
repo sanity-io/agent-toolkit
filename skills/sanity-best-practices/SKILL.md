@@ -59,7 +59,7 @@ Reference these guidelines when:
 - `hydrogen` - Shopify Hydrogen with Sanity
 - `project-structure` - Standalone Studio and monorepo patterns
 - `app-sdk` - Custom applications with Sanity App SDK
-- `dashboard` - Studios and apps in the Sanity Dashboard: defineApplication, local dev, deploys, Dashboard hooks
+- `dashboard` - Studios and apps in the Sanity Dashboard: defineApplication, local dev, deploys, classic Studio registration, Dashboard hooks
 - `blueprints` - Infrastructure as Code: blueprint files, stacks, plan/deploy workflow, error recovery, CI deploys
 - `functions` - Automating content workflows with Sanity Functions and webhooks
 

@@ -45,7 +45,7 @@ Why standalone instead of embedding the Studio in the Next.js app:
 - See `project-structure.md` rule for detailed structure.
 
 ### Option B: Embedded Studio (Not Recommended)
-The Studio can be mounted inside the Next.js app at `/app/studio/[[...tool]]/page.tsx` via `next-sanity/studio`. Avoid this for new projects: it slows builds, ties every Studio update to an app deploy, and rules out auto-updates and TypeGen watch mode. For maintaining or migrating an existing embedded Studio, see section 5.
+The Studio can be mounted inside the Next.js app at `/app/studio/[[...tool]]/page.tsx` via `next-sanity/studio`. Avoid this for new projects: it slows builds, ties every Studio update to an app deploy, and rules out auto-updates and TypeGen watch mode. For maintaining or migrating an existing embedded Studio, see section 5. An embedded Studio only appears in the Sanity Dashboard after `sanity deploy --external` and the bridge script; see the Classic Studios section of the `dashboard` rule.
 
 ## 2. Data Fetching (Live Content API)
 

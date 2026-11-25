@@ -1,6 +1,6 @@
 ---
 title: Sanity Dashboard Apps
-description: Rules for Studios and App SDK apps that run in the Sanity Dashboard, including defineApplication config (beta), app visibility, local Dashboard development, first deploys and deployment.appId, and Dashboard hooks from @sanity/sdk-react/dashboard.
+description: Rules for Studios and App SDK apps that run in the Sanity Dashboard, including defineApplication config (beta), app visibility, local Dashboard development, first deploys and deployment.appId, getting classic Studios into the Dashboard (sanity deploy, deploy --external, bridge script, Hide in Dashboard), and Dashboard hooks from @sanity/sdk-react/dashboard.
 ---
 
 # Sanity Dashboard Apps
@@ -13,13 +13,14 @@ Read `sanity.cli.ts` before running `dev` or `deploy`:
 
 - `app: defineApplication({...})` → a **Dashboard app** (beta). Follow this rule.
 - `app: {organizationId, entry}` with no `defineApplication` → a classic App SDK app. Only the Visibility and Dashboard Hooks sections apply.
-- No `app` key → a classic Studio. This rule does not apply.
+- No `app` key → a classic Studio. Only the Classic Studios section applies.
 
 ## Boundaries
 
 - **Always:** Save `application.id` from the first deploy as `deployment.appId` in `sanity.cli.ts`
 - **Always:** Import Dashboard hooks from `@sanity/sdk-react/dashboard`, not `@sanity/sdk-react`
 - **Always:** Change `slug`, `title`, and `visibility` in `sanity.cli.ts` and redeploy; config is the source of truth
+- **Always:** Register a self-hosted or embedded classic Studio with `sanity deploy --external --url <full-url>` on every deploy
 - **Ask first:** Before converting an existing classic Studio or app to `defineApplication`; it opts the project into the Dashboard beta
 - **Never:** Pass `--create` or `--external` to `sanity deploy` for a Dashboard app (both rejected)
 - **Never:** Call the applications API directly to create or patch an app; use the CLI
@@ -120,6 +121,34 @@ npm run deploy -- --yes --json
 - Agent terminals may disable prompts (`TERM=dumb`). Use these flags rather than changing terminal settings.
 
 Deployed apps are served at `https://<organizationId>.sanity.run/applications/<appId>` and Studios at `https://<organizationId>.sanity.run/studios/<appId>`.
+
+## Classic Studios
+
+A Studio without `defineApplication` shows up in the Dashboard once it is deployed or registered with the CLI. Use the latest `sanity` release; schema deployment needs v3.88.0+.
+
+```bash
+# Develop: open the local Studio inside the Dashboard
+npm run dev -- --load-in-dashboard
+
+# Sanity-hosted: builds, deploys, and registers the Studio and its schema
+npx sanity@latest deploy
+
+# Self-hosted or embedded: build and upload to your host, then register (uploads nothing)
+npx sanity@latest build
+npx sanity@latest deploy --external --url https://example.com/studio
+```
+
+- Studios deployed before Dashboard existed need one more `sanity deploy`, even with auto-updates on.
+- `--url` is the full public URL, including any `basePath`. Run `deploy --external` on every deploy: each run refreshes the schema and manifest. In CI, pass `--url` every time and set `SANITY_AUTH_TOKEN` to a project deploy token.
+- Adding the Studio URL in Manage, serving manifest files from your own host, or running `sanity schemas deploy` does not register the Studio. Without registration, Dashboard and Media Library cannot open it.
+- An embedded Studio (for example `next-sanity`), or any Studio not built with `sanity build` or `sanity deploy`, also needs the bridge script on its route: `<script src="https://core.sanity-cdn.com/bridge.js" async type="module"></script>`.
+- The Studio must load without authentication and allow framing by the Dashboard: `Content-Security-Policy: frame-ancestors https://*.sanity.io`. `X-Frame-Options: DENY` or `SAMEORIGIN`, or `frame-ancestors 'self'` alone, block it (watch for Vercel deployment protection and Cloudflare).
+
+Visibility, name, and icon are not set in `sanity.cli.ts` for a classic Studio:
+
+- **Visibility:** the project's **Studios** page in Manage → context menu → **Hide in Dashboard**. The Studio stays registered.
+- **Name:** the Studio **Title** set in Manage, else the project name (Sanity-hosted Studio with several workspaces), else the first workspace's `title`.
+- **Icon:** the workspace `icon` in `sanity.config.ts`, as a static, self-contained SVG component (no hooks, context, or external values). Studios with several workspaces show an initials avatar instead.
 
 ## Dashboard Hooks
 
