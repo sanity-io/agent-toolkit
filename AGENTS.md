@@ -100,6 +100,12 @@ Example: If asked to "create a blog post schema", read `skills/sanity-best-pract
 | `publish_documents` | Publish one or more drafts |
 | `unpublish_documents` | Unpublish documents (move back to drafts) |
 | `discard_drafts` | Discard drafts while keeping published documents |
+| `documents_validate` | Validate documents against the schema |
+
+`create_documents` and `patch_documents` don't validate what they write. Call `documents_validate` on the written IDs and read `complete`:
+
+- `complete: true`: every rule ran.
+- `complete: false`: treat the documents as unverified. `rule.custom` isn't run by the server, so run those checks locally if you have the Studio source and a shell (`npx sanity documents validate`), otherwise tell the user which fields were skipped.
 
 **Schema & Development:**
 
