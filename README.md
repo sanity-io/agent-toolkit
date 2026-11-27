@@ -183,6 +183,12 @@ Install best practices skills that work with any [Agent Skills](https://agentski
 npx skills add sanity-io/agent-toolkit
 ```
 
+Or install them with the [GitHub CLI](https://cli.github.com/manual/gh_skill_install):
+
+```bash
+gh skill install sanity-io/agent-toolkit
+```
+
 See [Option 3](#option-3-install-plugin) for plugin installation.
 
 ### Option 3: Install plugin
